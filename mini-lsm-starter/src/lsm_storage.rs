@@ -1,6 +1,5 @@
 #![allow(dead_code)] // REMOVE THIS LINE after fully implementing this functionality
 
-use std::borrow::{Borrow, BorrowMut};
 use std::collections::HashMap;
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
@@ -281,14 +280,26 @@ impl LsmStorageInner {
     /// Get a key from the storage. In day 7, this can be further optimized by using a bloom filter.
     pub fn get(&self, key: &[u8]) -> Result<Option<Bytes>> {
         let storage = self.state.read();
-        match storage.memtable.get(key) {
-            Some(bytes) => Ok(if bytes.is_empty() {
+
+        if let Some(bytes) = storage.memtable.get(key) {
+            return Ok(if bytes.is_empty() {
                 None
             } else {
                 Some(bytes.clone())
-            }),
-            None => Ok(None),
+            });
         }
+
+        for mem_table in &storage.imm_memtables {
+            if let Some(bytes) = mem_table.get(key) {
+                return Ok(if bytes.is_empty() {
+                    None
+                } else {
+                    Some(bytes.clone())
+                });
+            }
+        }
+
+        Ok(None)
     }
 
     /// Write a batch of data into the storage. Implement in week 2 day 7.
