@@ -1,5 +1,4 @@
-use anyhow::{anyhow, Error, Result};
-use std::io::ErrorKind;
+use anyhow::{anyhow, Result};
 
 use crate::{
     iterators::{merge_iterator::MergeIterator, StorageIterator},
@@ -35,7 +34,12 @@ impl StorageIterator for LsmIterator {
     }
 
     fn next(&mut self) -> Result<()> {
-        self.inner.next()
+        let res = self.inner.next();
+        if res.is_ok() && !self.key().is_empty() && self.value().is_empty() {
+            self.next()
+        } else {
+            res
+        }
     }
 }
 
