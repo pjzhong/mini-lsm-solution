@@ -1,7 +1,5 @@
-#![allow(unused_variables)] // TODO(you): remove this lint after implementing this mod
-#![allow(dead_code)] // TODO(you): remove this lint after implementing this mod
-
 use std::cmp::{self};
+use std::collections::binary_heap::PeekMut;
 use std::collections::BinaryHeap;
 
 use anyhow::Result;
@@ -38,6 +36,7 @@ impl<I: StorageIterator> Ord for HeapWrapper<I> {
     }
 }
 
+//1.整合多个Iter的结果，整合多个Iter的结果。如果遇到重复的key，下标最小的优先
 /// Merge multiple iterators of the same type. If the same key occurs multiple times in some
 /// iterators, prefer the one with smaller index.
 pub struct MergeIterator<I: StorageIterator> {
@@ -47,7 +46,16 @@ pub struct MergeIterator<I: StorageIterator> {
 
 impl<I: StorageIterator> MergeIterator<I> {
     pub fn create(iters: Vec<Box<I>>) -> Self {
-        unimplemented!()
+        let iters = iters
+            .into_iter()
+            .filter(|b| b.is_valid())
+            .enumerate()
+            .map(|(idx, b)| HeapWrapper(idx, b))
+            .collect::<Vec<_>>();
+        let mut iters = BinaryHeap::from(iters);
+        let current = iters.pop();
+
+        Self { iters, current }
     }
 }
 
@@ -57,18 +65,66 @@ impl<I: 'static + for<'a> StorageIterator<KeyType<'a> = KeySlice<'a>>> StorageIt
     type KeyType<'a> = KeySlice<'a>;
 
     fn key(&self) -> KeySlice {
-        unimplemented!()
+        match self.current.as_ref() {
+            Some(wrapper) => {
+                let iter = &wrapper.1;
+                iter.key()
+            }
+            None => KeySlice::from_slice(&[]),
+        }
     }
 
     fn value(&self) -> &[u8] {
-        unimplemented!()
+        match self.current.as_ref() {
+            Some(wrapper) => {
+                let iter = &wrapper.1;
+                iter.value()
+            }
+            None => &[],
+        }
     }
 
     fn is_valid(&self) -> bool {
-        unimplemented!()
+        self.current
+            .as_ref()
+            .map_or(false, |inner_iter| inner_iter.1.is_valid())
     }
 
     fn next(&mut self) -> Result<()> {
-        unimplemented!()
+        let heap_wrapper = match self.current.as_mut() {
+            None => return Ok(()),
+            Some(heap_wrapper) => heap_wrapper,
+        };
+
+        let key = heap_wrapper.1.key();
+
+        while let Some(mut wrapper) = self.iters.peek_mut() {
+            if wrapper.1.key() == key {
+                if let e @ Err(_) = wrapper.1.next() {
+                    PeekMut::pop(wrapper);
+                    return e;
+                }
+
+                if !wrapper.1.is_valid() {
+                    PeekMut::pop(wrapper);
+                }
+            } else {
+                break;
+            }
+        }
+
+        heap_wrapper.1.next()?;
+
+        if heap_wrapper.1.is_valid() {
+            if let Some(mut wrapper) = self.iters.peek_mut() {
+                if *heap_wrapper < *wrapper {
+                    std::mem::swap(&mut *wrapper, heap_wrapper);
+                }
+            }
+        } else {
+            self.current = self.iters.pop();
+        }
+
+        Ok(())
     }
 }
