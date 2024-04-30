@@ -32,30 +32,16 @@ impl Block {
 
     /// Decode from the data layout, transform the input `data` to a single `Block`
     pub fn decode(data: &[u8]) -> Self {
-        let mut data = data;
-        let num = (&data[data.len() - size_of::<u16>()..]).get_u16();
-
-        let mut entries = vec![];
-
-        for _ in 0..num {
-            let key_len = data.get_u16() as usize;
-            entries.put_u16(key_len as u16);
-            entries.extend_from_slice(&data[..key_len]);
-            data.advance(key_len);
-
-            let val_len = data.get_u16() as usize;
-            entries.put_u16(val_len as u16);
-            entries.extend_from_slice(&data[..val_len]);
-            data.advance(val_len);
-        }
-
-        let mut offsets = vec![];
-        for _ in 0..num {
-            offsets.push(data.get_u16());
-        }
+        const SIZE_U16: usize = size_of::<u16>();
+        let num = (&data[data.len() - SIZE_U16..]).get_u16();
+        let offsets_start = data.len() - num as usize * SIZE_U16 - SIZE_U16;
+        let offsets: Vec<u16> = data[offsets_start..data.len() - SIZE_U16]
+            .chunks(SIZE_U16)
+            .map(|mut offset| offset.get_u16())
+            .collect();
 
         Self {
-            data: entries,
+            data: data[0..offsets_start].to_vec(),
             offsets,
         }
     }
