@@ -45,4 +45,28 @@ impl Block {
             offsets,
         }
     }
+
+    pub fn first_key(&self) -> Option<Bytes> {
+        let offset = match self.offsets.first() {
+            Some(offset) => *offset as usize,
+            None => return None,
+        };
+
+        let mut data = &self.data[offset..];
+        let len = data.get_u16() as usize;
+
+        Some(Bytes::copy_from_slice(&data[..len]))
+    }
+
+    pub fn last_key(&self) -> Option<Bytes> {
+        let offset = match self.offsets.last() {
+            Some(offset) => *offset as usize,
+            None => return None,
+        };
+
+        let mut data = &self.data[offset..];
+        let len = data.get_u16() as usize;
+
+        Some(Bytes::copy_from_slice(&data[..len]))
+    }
 }

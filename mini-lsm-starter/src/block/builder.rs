@@ -45,7 +45,7 @@ impl BlockBuilder {
         true
     }
 
-    fn is_exceed_size(&self, key: KeySlice, value: &[u8]) -> bool {
+    pub fn is_exceed_size(&self, key: KeySlice, value: &[u8]) -> bool {
         const KEY_VAL_LEN: usize = 4;
         self.block_size
             < self.data.len() + self.offsets.len() * 2 + KEY_VAL_LEN + key.len() + value.len()
