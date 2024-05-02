@@ -10,6 +10,7 @@ use crate::key::{KeySlice, KeyVec};
 use super::Block;
 
 /// Iterates on a block.
+#[derive(Default)]
 pub struct BlockIterator {
     /// The internal `Block`, wrapped by an `Arc`
     block: Arc<Block>,
@@ -24,7 +25,7 @@ pub struct BlockIterator {
 }
 
 impl BlockIterator {
-    fn new(block: Arc<Block>) -> Self {
+    pub fn new(block: Arc<Block>) -> Self {
         let mut iter = Self {
             block,
             key: KeyVec::new(),
@@ -84,7 +85,7 @@ impl BlockIterator {
     /// Returns true if the iterator is valid.
     /// Note: You may want to make use of `key`
     pub fn is_valid(&self) -> bool {
-        self.key.is_empty()
+        !self.key.is_empty()
     }
 
     /// Seeks to the first key in the block.

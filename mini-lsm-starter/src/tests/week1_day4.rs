@@ -130,11 +130,13 @@ fn test_sst_seek_key() {
                 as_bytes(&value_of(i)),
                 as_bytes(value)
             );
+
             iter.seek_to_key(KeySlice::for_testing_from_slice_no_ts(
                 &format!("key_{:03}", i * 5 + offset).into_bytes(),
             ))
             .unwrap();
         }
+        println!("1111");
         iter.seek_to_key(KeySlice::for_testing_from_slice_no_ts(b"k"))
             .unwrap();
     }

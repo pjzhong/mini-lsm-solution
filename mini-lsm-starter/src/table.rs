@@ -8,6 +8,7 @@ mod iterator;
 use std::fs::File;
 use std::io::{Read, Seek};
 use std::mem::size_of;
+use std::os::unix::fs::FileExt;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -76,7 +77,6 @@ pub struct FileObject(Option<File>, u64);
 
 impl FileObject {
     pub fn read(&self, offset: u64, len: u64) -> Result<Vec<u8>> {
-        use std::os::unix::fs::FileExt;
         let mut data = vec![0; len as usize];
         self.0
             .as_ref()
@@ -189,7 +189,24 @@ impl SsTable {
 
     /// Read a block from the disk.
     pub fn read_block(&self, block_idx: usize) -> Result<Arc<Block>> {
-        unimplemented!()
+        let file = match &self.file.0 {
+            Some(f) => f,
+            None => return Err(anyhow!("File not exists")),
+        };
+
+        let (start, length) = match (
+            self.block_meta.get(block_idx),
+            self.block_meta.get(block_idx + 1),
+        ) {
+            (Some(fir), Some(sec)) => (fir.offset, sec.offset - fir.offset),
+            (Some(fir), None) => (fir.offset, self.block_meta_offset - fir.offset),
+            _ => return Ok(Arc::default()),
+        };
+
+        let mut buffer = vec![0; length];
+        file.read_exact_at(&mut buffer, start as u64)?;
+
+        Ok(Arc::new(Block::decode(&buffer)))
     }
 
     /// Read a block from disk, with block cache. (Day 4)
@@ -201,7 +218,9 @@ impl SsTable {
     /// Note: You may want to make use of the `first_key` stored in `BlockMeta`.
     /// You may also assume the key-value pairs stored in each consecutive block are sorted.
     pub fn find_block_idx(&self, key: KeySlice) -> usize {
-        unimplemented!()
+        self.block_meta
+            .binary_search_by_key(&key, |b| b.first_key.as_key_slice())
+            .unwrap_or_else(|idx| idx)
     }
 
     /// Get number of data blocks.
