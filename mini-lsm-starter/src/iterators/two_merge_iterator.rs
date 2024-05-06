@@ -18,6 +18,14 @@ impl<
     pub fn create(a: A, b: B) -> Result<Self> {
         Ok(Self { a, b })
     }
+
+    fn is_a_valid(&self) -> bool {
+        match (self.a.is_valid(), self.b.is_valid()) {
+            (true, true) => self.a.key() <= self.b.key(),
+            (true, false) => true,
+            _ => false,
+        }
+    }
 }
 
 impl<
@@ -28,30 +36,18 @@ impl<
     type KeyType<'a> = A::KeyType<'a>;
 
     fn key(&self) -> Self::KeyType<'_> {
-        match (self.a.is_valid(), self.b.is_valid()) {
-            (true, true) => {
-                if self.a.key() <= self.b.key() {
-                    self.a.key()
-                } else {
-                    self.b.key()
-                }
-            }
-            (true, false) => self.a.key(),
-            _ => self.b.key(),
+        if self.is_a_valid() {
+            self.a.key()
+        } else {
+            self.b.key()
         }
     }
 
     fn value(&self) -> &[u8] {
-        match (self.a.is_valid(), self.b.is_valid()) {
-            (true, true) => {
-                if self.a.key() <= self.b.key() {
-                    self.a.value()
-                } else {
-                    self.b.value()
-                }
-            }
-            (true, false) => self.a.value(),
-            _ => self.b.value(),
+        if self.is_a_valid() {
+            self.a.value()
+        } else {
+            self.b.value()
         }
     }
 

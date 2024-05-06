@@ -16,12 +16,14 @@ use crate::compact::{
     SimpleLeveledCompactionController, SimpleLeveledCompactionOptions, TieredCompactionController,
 };
 use crate::iterators::merge_iterator::MergeIterator;
+use crate::iterators::two_merge_iterator::TwoMergeIterator;
 use crate::iterators::StorageIterator;
+use crate::key::KeySlice;
 use crate::lsm_iterator::{FusedIterator, LsmIterator};
 use crate::manifest::Manifest;
 use crate::mem_table::MemTable;
 use crate::mvcc::LsmMvccInner;
-use crate::table::SsTable;
+use crate::table::{SsTable, SsTableIterator};
 
 pub type BlockCache = moka::sync::Cache<(usize, usize), Arc<Block>>;
 
@@ -391,10 +393,13 @@ impl LsmStorageInner {
         lower: Bound<&[u8]>,
         upper: Bound<&[u8]>,
     ) -> Result<FusedIterator<LsmIterator>> {
-        let state = self.state.read();
-        let mut iters = vec![];
-        iters.push(Box::new(state.memtable.scan(lower, upper)));
-        iters.append(
+        let state = {
+            let guard = self.state.read();
+            Arc::clone(&guard)
+        };
+        let mut mem_iters = vec![];
+        mem_iters.push(Box::new(state.memtable.scan(lower, upper)));
+        mem_iters.append(
             &mut state
                 .imm_memtables
                 .clone()
@@ -403,10 +408,43 @@ impl LsmStorageInner {
                 .collect(),
         );
 
-        let mut iter = LsmIterator::new(MergeIterator::create(iters))?;
-        while !iter.key().is_empty() && iter.value().is_empty() {
-            iter.next()?;
+        let mut sst_iters = vec![];
+        let key_slice = match lower {
+            Bound::Included(x) => KeySlice::from_slice(x),
+            Bound::Excluded(x) => KeySlice::from_slice(x),
+            Bound::Unbounded => KeySlice::default(),
+        };
+        for idx in &state.l0_sstables {
+            let sst_table = match state.sstables.get(idx) {
+                Some(sst_table) => sst_table.clone(),
+                None => continue,
+            };
+
+            let iter = {
+                let mut iter = SsTableIterator::create_and_seek_to_key(sst_table, key_slice)?;
+
+                if let Bound::Excluded(x) = lower {
+                    if x == key_slice.raw_ref() {
+                        iter.next()?;
+                    }
+                }
+
+                if !iter.is_valid() {
+                    continue;
+                }
+                iter
+            };
+
+            sst_iters.push(Box::new(iter));
         }
+
+        let iter = LsmIterator::new(
+            TwoMergeIterator::create(
+                MergeIterator::create(mem_iters),
+                MergeIterator::create(sst_iters),
+            )?,
+            upper,
+        )?;
 
         Ok(FusedIterator::new(iter))
     }
