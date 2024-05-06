@@ -303,6 +303,35 @@ impl LsmStorageInner {
             }
         }
 
+        let storage = {
+            let snapshot = storage.clone();
+            drop(storage);
+            snapshot
+        };
+
+        let key_slice = KeySlice::from_slice(key);
+        for idx in &storage.l0_sstables {
+            let sst_table = match storage.sstables.get(idx) {
+                Some(sst_table) => sst_table.clone(),
+                None => continue,
+            };
+
+            let iter = SsTableIterator::create_and_seek_to_key(sst_table, key_slice)?;
+            if !iter.is_valid() {
+                continue;
+            }
+
+            if iter.key() != key_slice {
+                continue;
+            }
+
+            return Ok(if iter.value().is_empty() {
+                None
+            } else {
+                Some(Bytes::copy_from_slice(iter.value()))
+            });
+        }
+
         Ok(None)
     }
 
@@ -408,12 +437,12 @@ impl LsmStorageInner {
                 .collect(),
         );
 
-        let mut sst_iters = vec![];
         let key_slice = match lower {
             Bound::Included(x) => KeySlice::from_slice(x),
             Bound::Excluded(x) => KeySlice::from_slice(x),
             Bound::Unbounded => KeySlice::default(),
         };
+        let mut sst_iters = vec![];
         for idx in &state.l0_sstables {
             let sst_table = match state.sstables.get(idx) {
                 Some(sst_table) => sst_table.clone(),

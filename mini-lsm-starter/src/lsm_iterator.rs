@@ -36,8 +36,8 @@ impl LsmIterator {
         };
 
         match &self.end {
-            Bound::Included(x) => self.inner.key().raw_ref() <= x && !self.value().is_empty(),
-            Bound::Excluded(x) => self.inner.key().raw_ref() < x && !self.value().is_empty(),
+            Bound::Included(x) => self.inner.key().raw_ref() <= x,
+            Bound::Excluded(x) => self.inner.key().raw_ref() < x,
             Bound::Unbounded => true,
         }
     }
