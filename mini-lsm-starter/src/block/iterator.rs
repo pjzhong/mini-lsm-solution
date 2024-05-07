@@ -1,6 +1,3 @@
-#![allow(unused_variables)] // TODO(you): remove this lint after implementing this mod
-#![allow(dead_code)] // TODO(you): remove this lint after implementing this mod
-
 use bytes::Buf;
 use std::mem::size_of;
 use std::sync::Arc;
@@ -40,7 +37,7 @@ impl BlockIterator {
         iter
     }
 
-    fn nth_entry(&mut self, idx: usize) -> ((usize, usize), KeyVec) {
+    fn nth_entry(&self, idx: usize) -> ((usize, usize), KeyVec) {
         if self.block.offsets.len() <= idx {
             ((0, 0), KeyVec::new())
         } else {

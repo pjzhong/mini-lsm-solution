@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::ops::Bound;
 use std::path::Path;
 use std::sync::atomic::AtomicUsize;
@@ -111,8 +112,15 @@ impl MemTable {
     }
 
     /// Flush the mem-table to SSTable. Implement in week 1 day 6.
-    pub fn flush(&self, _builder: &mut SsTableBuilder) -> Result<()> {
-        unimplemented!()
+    pub fn flush(&self, builder: &mut SsTableBuilder) -> Result<()> {
+        for entry in self.map.iter() {
+            let k = entry.key();
+            let v = entry.value();
+
+            builder.add(KeySlice::from_slice(k), v);
+        }
+
+        Ok(())
     }
 
     pub fn id(&self) -> usize {
