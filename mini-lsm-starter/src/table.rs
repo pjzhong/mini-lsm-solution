@@ -5,6 +5,7 @@ pub(crate) mod bloom;
 mod builder;
 mod iterator;
 
+use std::collections::Bound;
 use std::fs::File;
 use std::io::{Read, Seek};
 use std::mem::size_of;
@@ -254,5 +255,26 @@ impl SsTable {
 
     pub fn max_ts(&self) -> u64 {
         self.max_ts
+    }
+
+    pub fn key_within(&self, key: &KeySlice) -> bool {
+        self.first_key.raw_ref() <= key.raw_ref() && key.raw_ref() <= self.last_key.raw_ref()
+    }
+
+    pub fn range_overlap(&self, lower: Bound<&[u8]>, upper: Bound<&[u8]>) -> bool {
+        //试一下反证法嘛，两个区间重叠难判断，就判断两个区间不重叠呗。看哪个简单
+        match upper {
+            Bound::Included(upper) if upper < self.first_key.raw_ref() => return false,
+            Bound::Excluded(upper) if upper <= self.first_key.raw_ref() => return false,
+            _ => {}
+        };
+
+        match lower {
+            Bound::Included(lower) if self.last_key.raw_ref() < lower => return false,
+            Bound::Excluded(lower) if self.last_key.raw_ref() <= lower => return false,
+            _ => {}
+        };
+
+        true
     }
 }

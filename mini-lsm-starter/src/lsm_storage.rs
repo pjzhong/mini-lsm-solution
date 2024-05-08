@@ -329,8 +329,8 @@ impl LsmStorageInner {
         let key_slice = KeySlice::from_slice(key);
         for idx in &storage.l0_sstables {
             let sst_table = match storage.sstables.get(idx) {
-                Some(sst_table) => sst_table.clone(),
-                None => continue,
+                Some(sst_table) if sst_table.key_within(&key_slice) => sst_table.clone(),
+                _ => continue,
             };
 
             let iter = SsTableIterator::create_and_seek_to_key(sst_table, key_slice)?;
@@ -500,8 +500,8 @@ impl LsmStorageInner {
         let mut sst_iters = vec![];
         for idx in &state.l0_sstables {
             let sst_table = match state.sstables.get(idx) {
-                Some(sst_table) => sst_table.clone(),
-                None => continue,
+                Some(sst_table) if sst_table.range_overlap(lower, upper) => sst_table.clone(),
+                _ => continue,
             };
 
             let iter = {

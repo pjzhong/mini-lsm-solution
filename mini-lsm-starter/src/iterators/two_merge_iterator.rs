@@ -80,4 +80,9 @@ impl<
 
         Ok(())
     }
+
+    /// Number of underlying active iterators for this iterator.
+    fn num_active_iterators(&self) -> usize {
+        self.a.num_active_iterators() + self.b.num_active_iterators()
+    }
 }
