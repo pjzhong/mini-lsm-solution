@@ -1,7 +1,8 @@
+#![allow(unused_variables)] // TODO(you): remove this lint after implementing this mod
+#![allow(dead_code)] // TODO(you): remove this lint after implementing this mod
+
 use std::collections::HashMap;
 use std::fs;
-use std::fs::{File, OpenOptions};
-use std::io::{Error, ErrorKind};
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicUsize;
@@ -159,7 +160,22 @@ impl Drop for MiniLsm {
 
 impl MiniLsm {
     pub fn close(&self) -> Result<()> {
-        unimplemented!()
+        self.flush_notifier.send(()).ok();
+        self.compaction_notifier.send(()).ok();
+
+        if let Some(flush_thread) = self.flush_thread.lock().take() {
+            if let Err(e) = flush_thread.join() {
+                return Err(anyhow!("join flush thread error, msg:{:?}", e));
+            }
+        }
+
+        if let Some(flush_thread) = self.compaction_thread.lock().take() {
+            if let Err(e) = flush_thread.join() {
+                return Err(anyhow!("join flush thread error, msg:{:?}", e));
+            }
+        }
+
+        Ok(())
     }
 
     /// Start the storage engine by either loading an existing directory or creating a new one if the directory does
@@ -309,12 +325,6 @@ impl LsmStorageInner {
                 });
             }
         }
-
-        let storage = {
-            let snapshot = storage.clone();
-            drop(storage);
-            snapshot
-        };
 
         let key_slice = KeySlice::from_slice(key);
         for idx in &storage.l0_sstables {
