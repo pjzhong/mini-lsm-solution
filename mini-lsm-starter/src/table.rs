@@ -1,6 +1,3 @@
-#![allow(unused_variables)] // TODO(you): remove this lint after implementing this mod
-#![allow(dead_code)] // TODO(you): remove this lint after implementing this mod
-
 pub(crate) mod bloom;
 mod builder;
 mod iterator;
@@ -137,10 +134,18 @@ impl SsTable {
             None => return Err(anyhow!("file not exists")),
         };
 
-        let mut bytes = vec![0; file_size as usize];
-        file.read_exact(&mut bytes)?;
+        let bytes = {
+            let mut bytes = vec![0; file_size as usize];
+            file.read_exact(&mut bytes)?;
+            bytes
+        };
 
         const U32_SIZE: usize = size_of::<u32>();
+        let bloom_offset = (&bytes[bytes.len() - U32_SIZE..]).get_u32() as usize;
+        let bloom = &bytes[bloom_offset..bytes.len() - U32_SIZE];
+        let bloom = Bloom::decode(bloom)?;
+
+        let bytes = &bytes[..bloom_offset];
         let block_meta_offset = (&bytes[bytes.len() - U32_SIZE..]).get_u32() as usize;
 
         let block_meta = &bytes[block_meta_offset..bytes.len() - U32_SIZE];
@@ -163,7 +168,7 @@ impl SsTable {
             block_cache,
             first_key,
             last_key,
-            bloom: None,
+            bloom: Some(bloom),
             max_ts: 0,
         })
     }
@@ -258,7 +263,12 @@ impl SsTable {
     }
 
     pub fn key_within(&self, key: &KeySlice) -> bool {
-        self.first_key.raw_ref() <= key.raw_ref() && key.raw_ref() <= self.last_key.raw_ref()
+        if let Some(bloom) = &self.bloom {
+            let hash = farmhash::fingerprint32(key.raw_ref());
+            bloom.may_contain(hash)
+        } else {
+            self.first_key.raw_ref() <= key.raw_ref() && key.raw_ref() <= self.last_key.raw_ref()
+        }
     }
 
     pub fn range_overlap(&self, lower: Bound<&[u8]>, upper: Bound<&[u8]>) -> bool {
