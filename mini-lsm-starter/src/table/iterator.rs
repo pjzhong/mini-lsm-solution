@@ -15,7 +15,10 @@ pub struct SsTableIterator {
 impl SsTableIterator {
     /// Create a new iterator and seek to the first key-value pair in the first data block.
     pub fn create_and_seek_to_first(table: Arc<SsTable>) -> Result<Self> {
-        let blk_iter = BlockIterator::new(table.read_block_cached(0)?);
+        let blk_iter = BlockIterator::new_with_prefix(
+            table.read_block_cached(0)?,
+            Some(table.first_key.clone()),
+        );
         Ok(Self {
             table,
             blk_iter,
@@ -26,7 +29,10 @@ impl SsTableIterator {
     /// Seek to the first key-value pair in the first data block.
     pub fn seek_to_first(&mut self) -> Result<()> {
         self.blk_idx = 0;
-        self.blk_iter = BlockIterator::new(self.table.read_block_cached(0)?);
+        self.blk_iter = BlockIterator::new_with_prefix(
+            self.table.read_block_cached(0)?,
+            Some(self.table.first_key.clone()),
+        );
         Ok(())
     }
 
@@ -49,13 +55,19 @@ impl SsTableIterator {
         let block_meta = &self.table.block_meta[idx];
 
         if key <= block_meta.last_key.as_key_slice() {
-            let mut blk_iter = BlockIterator::new(self.table.read_block_cached(idx)?);
+            let mut blk_iter = BlockIterator::new_with_prefix(
+                self.table.read_block_cached(idx)?,
+                Some(self.table.first_key.clone()),
+            );
             blk_iter.seek_to_key(key);
             self.blk_iter = blk_iter;
             self.blk_idx = idx;
         } else {
             let idx = idx + 1;
-            let blk_iter = BlockIterator::new(self.table.read_block_cached(idx)?);
+            let blk_iter = BlockIterator::new_with_prefix(
+                self.table.read_block_cached(idx)?,
+                Some(self.table.first_key.clone()),
+            );
             self.blk_iter = blk_iter;
             self.blk_idx = idx;
         }
@@ -87,7 +99,10 @@ impl StorageIterator for SsTableIterator {
         self.blk_iter.next();
         if !self.is_valid() && self.blk_idx + 1 < self.table.block_meta.len() {
             self.blk_idx += 1;
-            self.blk_iter = BlockIterator::new(self.table.read_block_cached(self.blk_idx)?);
+            self.blk_iter = BlockIterator::new_with_prefix(
+                self.table.read_block_cached(self.blk_idx)?,
+                Some(self.table.first_key.clone()),
+            );
         }
         Ok(())
     }

@@ -2,7 +2,7 @@ use bytes::Buf;
 use std::mem::size_of;
 use std::sync::Arc;
 
-use crate::key::{KeySlice, KeyVec};
+use crate::key::{KeyBytes, KeySlice, KeyVec};
 
 use super::Block;
 
@@ -19,16 +19,19 @@ pub struct BlockIterator {
     idx: usize,
     /// The first key in the block
     first_key: KeyVec,
+    /// The common prefix
+    prefix: Option<KeyBytes>,
 }
 
 impl BlockIterator {
-    pub fn new(block: Arc<Block>) -> Self {
+    pub fn new_with_prefix(block: Arc<Block>, prefix: Option<KeyBytes>) -> Self {
         let mut iter = Self {
             block,
             key: KeyVec::new(),
             value_range: (0, 0),
             idx: 0,
             first_key: KeyVec::new(),
+            prefix,
         };
         let (value_range, key) = iter.nth_entry(iter.idx);
         iter.value_range = value_range;
@@ -43,10 +46,21 @@ impl BlockIterator {
         } else {
             let data = self.block.offsets[idx] as usize;
             let mut data = &self.block.data[data..];
-
+            let prefix_len = data.get_u16() as usize;
             let key_len = data.get_u16() as usize;
-            let mut key = vec![0; key_len];
-            data.copy_to_slice(&mut key);
+            let key = {
+                let mut key = vec![0; key_len + prefix_len];
+                if let Some(prefix) = self
+                    .prefix
+                    .as_ref()
+                    .map(|bytes| &bytes.raw_ref()[..prefix_len])
+                {
+                    key[0..prefix_len].copy_from_slice(prefix);
+                }
+                data.copy_to_slice(&mut key[prefix_len..]);
+
+                key
+            };
 
             let val_len = data.get_u16() as usize;
             ((key_len, val_len), KeyVec::from_vec(key))
@@ -55,12 +69,12 @@ impl BlockIterator {
 
     /// Creates a block iterator and seek to the first entry.
     pub fn create_and_seek_to_first(block: Arc<Block>) -> Self {
-        Self::new(block)
+        Self::new_with_prefix(block, None)
     }
 
     /// Creates a block iterator and seek to the first key that >= `key`.
     pub fn create_and_seek_to_key(block: Arc<Block>, key: KeySlice) -> Self {
-        let mut iter = Self::new(block);
+        let mut iter = Self::new_with_prefix(block, None);
         iter.seek_to_key(key);
         iter
     }
@@ -72,9 +86,9 @@ impl BlockIterator {
 
     /// Returns the value of the current entry.
     pub fn value(&self) -> &[u8] {
-        //entry_offset + entry's key len + key and value length field length
+        //entry_offset + prefix_len +  key len +  value length field length
         let start =
-            self.block.offsets[self.idx] as usize + self.value_range.0 + size_of::<u16>() * 2;
+            self.block.offsets[self.idx] as usize + self.value_range.0 + size_of::<u16>() * 3;
         let end = start + self.value_range.1;
         &self.block.data[start..end]
     }
@@ -116,5 +130,15 @@ impl BlockIterator {
                 break;
             }
         }
+    }
+
+    pub fn first_key(&self) -> Option<KeyVec> {
+        let (_, key) = self.nth_entry(0);
+        Some(key)
+    }
+
+    pub fn last_key(&self) -> Option<KeyVec> {
+        let (_, key) = self.nth_entry(self.block.offsets.len().saturating_sub(1));
+        Some(key)
     }
 }

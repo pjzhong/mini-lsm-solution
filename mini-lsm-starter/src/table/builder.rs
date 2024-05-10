@@ -1,13 +1,15 @@
 #![allow(unused_variables)] // TODO(you): remove this lint after implementing this mod
 #![allow(dead_code)] // TODO(you): remove this lint after implementing this mod
 
+use std::iter;
 use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Result;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes};
 
 use super::{BlockMeta, FileObject, SsTable};
+use crate::block::BlockIterator;
 use crate::key::KeyBytes;
 use crate::table::bloom::Bloom;
 use crate::{block::BlockBuilder, key::KeySlice, lsm_storage::BlockCache};
@@ -21,6 +23,21 @@ pub struct SsTableBuilder {
     pub(crate) meta: Vec<BlockMeta>,
     block_size: usize,
     key_hashes: Vec<u32>,
+}
+
+/// see this https://users.rust-lang.org/t/how-to-find-common-prefix-of-two-byte-slices-effectively/25815/3
+fn mismatch(xs: &[u8], ys: &[u8]) -> usize {
+    mismatch_chunks::<128>(xs, ys)
+}
+
+fn mismatch_chunks<const N: usize>(xs: &[u8], ys: &[u8]) -> usize {
+    let off = iter::zip(xs.chunks_exact(N), ys.chunks_exact(N))
+        .take_while(|(x, y)| x == y)
+        .count()
+        * N;
+    off + iter::zip(&xs[off..], &ys[off..])
+        .take_while(|(x, y)| x == y)
+        .count()
 }
 
 impl SsTableBuilder {
@@ -42,22 +59,35 @@ impl SsTableBuilder {
     /// Note: You should split a new block when the current block is full.(`std::mem::replace` may
     /// be helpful here)
     pub fn add(&mut self, key: KeySlice, value: &[u8]) {
-        let suc = self.builder.add(key, value);
+        if self.first_key.is_empty() {
+            self.first_key = key.raw_ref().to_vec();
+        }
+
+        let prefix_len = mismatch(&self.first_key, key.raw_ref());
+        let suc = self.builder.add_with_prefix(key, prefix_len, value);
         if !suc {
             self.split_block();
-            let _ = self.builder.add(key, value);
+            let _ = self.builder.add_with_prefix(key, prefix_len, value);
         }
         self.key_hashes.push(farmhash::fingerprint32(key.raw_ref()));
     }
 
     fn split_block(&mut self) {
         let block = std::mem::replace(&mut self.builder, BlockBuilder::new(self.block_size));
-        let block = block.build();
+        let block = Arc::new(block.build());
         let offset = self.data.len();
+
+        let iter = BlockIterator::new_with_prefix(
+            block.clone(),
+            Some(KeyBytes::from_bytes(Bytes::copy_from_slice(
+                &self.first_key,
+            ))),
+        );
+
         let block_meta = BlockMeta {
             offset,
-            first_key: KeyBytes::from_bytes(block.first_key().unwrap_or_default()),
-            last_key: KeyBytes::from_bytes(block.last_key().unwrap_or_default()),
+            first_key: iter.first_key().unwrap_or_default().into_key_bytes(),
+            last_key: iter.last_key().unwrap_or_default().into_key_bytes(),
         };
         self.meta.push(block_meta);
         self.data.extend_from_slice(&block.encode());

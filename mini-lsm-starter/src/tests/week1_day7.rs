@@ -1,5 +1,9 @@
+use bytes::Bytes;
+use std::sync::Arc;
 use tempfile::tempdir;
 
+use crate::iterators::StorageIterator;
+use crate::table::SsTableIterator;
 use crate::{
     key::{KeySlice, TS_ENABLED},
     table::{bloom::Bloom, FileObject, SsTable, SsTableBuilder},
@@ -74,7 +78,7 @@ fn test_task3_block_key_compression() {
     }
     let dir = tempdir().unwrap();
     let path = dir.path().join("1.sst");
-    let sst = builder.build_for_test(path).unwrap();
+    let sst = builder.build_for_test(&path).unwrap();
     if TS_ENABLED {
         assert!(
             sst.block_meta.len() <= 34,
@@ -88,4 +92,35 @@ fn test_task3_block_key_compression() {
             sst.block_meta.len()
         );
     }
+
+    let sst2 = SsTable::open(0, None, FileObject::open(&path).unwrap()).unwrap();
+
+    let mut iter1 = SsTableIterator::create_and_seek_to_first(Arc::new(sst)).unwrap();
+    let mut iter2 = SsTableIterator::create_and_seek_to_first(Arc::new(sst2)).unwrap();
+    for _ in 0..num_of_keys() {
+        let key1 = iter1.key();
+        let value1 = iter1.value();
+        let key2 = iter2.key();
+        let value2 = iter2.value();
+        assert_eq!(
+            key1.for_testing_key_ref(),
+            key2.for_testing_key_ref(),
+            "expected key: {:?}, actual key: {:?}",
+            as_bytes(key2.for_testing_key_ref()),
+            as_bytes(key1.for_testing_key_ref())
+        );
+        assert_eq!(
+            value1,
+            value2,
+            "expected value: {:?}, actual value: {:?}",
+            as_bytes(value2),
+            as_bytes(value1)
+        );
+        iter1.next().unwrap();
+        iter2.next().unwrap();
+    }
+}
+
+fn as_bytes(x: &[u8]) -> Bytes {
+    Bytes::copy_from_slice(x)
 }

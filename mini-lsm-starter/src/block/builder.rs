@@ -12,6 +12,8 @@ pub struct BlockBuilder {
     block_size: usize,
     /// The first key in the block
     first_key: KeyVec,
+    /// The common prefix
+    prefix: Option<KeyVec>,
 }
 
 impl BlockBuilder {
@@ -22,12 +24,19 @@ impl BlockBuilder {
             data: vec![],
             block_size,
             first_key: KeyVec::new(),
+            prefix: None,
         }
     }
 
     /// Adds a key-value pair to the block. Returns false when the block is full.
     #[must_use]
     pub fn add(&mut self, key: KeySlice, value: &[u8]) -> bool {
+        self.add_with_prefix(key, 0, value)
+    }
+
+    /// Adds a key-value pair to the block. Returns false when the block is full.
+    #[must_use]
+    pub fn add_with_prefix(&mut self, key: KeySlice, prefix_len: usize, value: &[u8]) -> bool {
         if self.data.is_empty() {
             self.first_key = KeyVec::from_vec(key.raw_ref().to_vec());
         } else if self.is_exceed_size(key, value) {
@@ -35,9 +44,11 @@ impl BlockBuilder {
         }
 
         self.offsets.push(self.data.len() as u16);
+        self.data.put_u16(prefix_len as u16);
 
+        let key = &key.raw_ref()[prefix_len..];
         self.data.put_u16(key.len() as u16);
-        self.data.put_slice(key.raw_ref());
+        self.data.put_slice(key);
 
         self.data.put_u16(value.len() as u16);
         self.data.put_slice(value);
