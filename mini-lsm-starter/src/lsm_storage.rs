@@ -359,6 +359,10 @@ impl LsmStorageInner {
 
     /// Put a key-value pair into the storage by writing into the current memtable.
     pub fn put(&self, key: &[u8], value: &[u8]) -> Result<()> {
+        if key.is_empty() {
+            return Err(anyhow!("Key is empty"));
+        }
+
         let storage = self.state.read();
         match storage.memtable.put(key, value) {
             Ok(_) => {
@@ -482,13 +486,13 @@ impl LsmStorageInner {
             Arc::clone(&guard)
         };
         let mut mem_iters = vec![];
-        mem_iters.push(Box::new(state.memtable.scan(lower, upper)));
+        mem_iters.push(state.memtable.scan(lower, upper).into());
         mem_iters.append(
             &mut state
                 .imm_memtables
                 .clone()
                 .into_iter()
-                .map(|m| Box::new(m.scan(lower, upper)))
+                .map(|m| m.scan(lower, upper).into())
                 .collect(),
         );
 
@@ -519,7 +523,7 @@ impl LsmStorageInner {
                 iter
             };
 
-            sst_iters.push(Box::new(iter));
+            sst_iters.push(iter.into());
         }
 
         let iter = LsmIterator::new(
