@@ -130,12 +130,12 @@ impl LsmStorageInner {
                         .cloned()
                         .collect();
 
-                    let mut iters = vec![];
+                    let mut l0_iters = vec![];
                     for table in l0 {
-                        iters.push(SsTableIterator::create_and_seek_to_first(table)?.into());
+                        l0_iters.push(SsTableIterator::create_and_seek_to_first(table)?.into());
                     }
                     TwoMergeIterator::create(
-                        MergeIterator::create(iters),
+                        MergeIterator::create(l0_iters),
                         SstConcatIterator::create_and_seek_to_first(levels)?,
                     )?
                 };
@@ -193,10 +193,13 @@ impl LsmStorageInner {
             (stat.l0_sstables.clone(), stat.levels[0].1.clone())
         };
 
-        let new_ssts = self.compact(&CompactionTask::ForceFullCompaction {
+        let compaction_task = CompactionTask::ForceFullCompaction {
             l0_sstables: l0_sstables.clone(),
             l1_sstables: l1_sstables.clone(),
-        })?;
+        };
+        let new_ssts = self.compact(&compaction_task)?;
+        let mut ids = Vec::with_capacity(new_ssts.len());
+        println!("force full compaction: {:?}", compaction_task);
 
         {
             let _state_lock = self.state_lock.lock();
@@ -206,33 +209,29 @@ impl LsmStorageInner {
             snapshot
                 .l0_sstables
                 .retain(|sst_id| !l0_sstables.contains(sst_id));
-            snapshot.levels[0].1 = new_ssts.iter().map(|sst| sst.sst_id()).collect();
+
+            //先刪除在放入，減少擴容的機會
+            for id in l0_sstables.iter().chain(l1_sstables.iter()) {
+                snapshot.sstables.remove(id);
+            }
+
             for sst in new_ssts {
+                ids.push(sst.sst_id());
                 snapshot.sstables.insert(sst.sst_id(), sst);
             }
-            for id in &l0_sstables {
-                snapshot.sstables.remove(id);
-            }
-            for id in &l1_sstables {
-                snapshot.sstables.remove(id);
-            }
+            snapshot.levels[0].1 = ids.clone();
 
             *state = Arc::new(snapshot);
         }
 
-        for id in l0_sstables {
-            let path = self.path_of_sst(id);
+        for id in l0_sstables.iter().chain(l0_sstables.iter()) {
+            let path = self.path_of_sst(*id);
             if path.exists() {
                 std::fs::remove_file(path)?;
             }
         }
 
-        for id in l1_sstables {
-            let path = self.path_of_sst(id);
-            if path.exists() {
-                std::fs::remove_file(path)?;
-            }
-        }
+        println!("force full compaction done, new SSTs: {:?}", ids);
 
         Ok(())
     }
