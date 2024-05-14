@@ -329,7 +329,7 @@ impl LsmStorageInner {
         let key_slice = KeySlice::from_slice(key);
         for idx in &storage.l0_sstables {
             let sst_table = match storage.sstables.get(idx) {
-                Some(sst_table) if sst_table.key_within(&key_slice) => sst_table.clone(),
+                Some(sst_table) if sst_table.key_may_contains(&key_slice) => sst_table.clone(),
                 _ => continue,
             };
 

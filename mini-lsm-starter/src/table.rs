@@ -263,6 +263,10 @@ impl SsTable {
     }
 
     pub fn key_within(&self, key: &KeySlice) -> bool {
+        self.first_key.raw_ref() <= key.raw_ref() && key.raw_ref() <= self.last_key.raw_ref()
+    }
+
+    pub fn key_may_contains(&self, key: &KeySlice) -> bool {
         if let Some(bloom) = &self.bloom {
             let hash = farmhash::fingerprint32(key.raw_ref());
             bloom.may_contain(hash)
