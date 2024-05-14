@@ -15,7 +15,9 @@ pub use simple_leveled::{
 };
 pub use tiered::{TieredCompactionController, TieredCompactionOptions, TieredCompactionTask};
 
+use crate::iterators::concat_iterator::SstConcatIterator;
 use crate::iterators::merge_iterator::MergeIterator;
+use crate::iterators::two_merge_iterator::TwoMergeIterator;
 use crate::iterators::StorageIterator;
 use crate::lsm_storage::{LsmStorageInner, LsmStorageState};
 use crate::table::{SsTable, SsTableBuilder, SsTableIterator};
@@ -117,27 +119,25 @@ impl LsmStorageInner {
             } => {
                 let mut iter = {
                     let state = self.state.read();
-                    let mut tables: Vec<Arc<SsTable>> = vec![];
-                    tables.append(
-                        &mut l0_sstables
-                            .iter()
-                            .flat_map(|id| state.sstables.get(id))
-                            .cloned()
-                            .collect(),
-                    );
-                    tables.append(
-                        &mut l1_sstables
-                            .iter()
-                            .flat_map(|id| state.sstables.get(id))
-                            .cloned()
-                            .collect(),
-                    );
+                    let l0: Vec<Arc<SsTable>> = l0_sstables
+                        .iter()
+                        .flat_map(|id| state.sstables.get(id))
+                        .cloned()
+                        .collect();
+                    let levels = l1_sstables
+                        .iter()
+                        .flat_map(|id| state.sstables.get(id))
+                        .cloned()
+                        .collect();
 
                     let mut iters = vec![];
-                    for table in tables {
+                    for table in l0 {
                         iters.push(SsTableIterator::create_and_seek_to_first(table)?.into());
                     }
-                    MergeIterator::create(iters)
+                    TwoMergeIterator::create(
+                        MergeIterator::create(iters),
+                        SstConcatIterator::create_and_seek_to_first(levels)?,
+                    )?
                 };
 
                 let mut builder = SsTableBuilder::new(self.options.block_size);

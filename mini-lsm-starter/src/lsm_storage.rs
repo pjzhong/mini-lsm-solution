@@ -17,6 +17,7 @@ use crate::compact::{
     CompactionController, CompactionOptions, LeveledCompactionController, LeveledCompactionOptions,
     SimpleLeveledCompactionController, SimpleLeveledCompactionOptions, TieredCompactionController,
 };
+use crate::iterators::concat_iterator::SstConcatIterator;
 use crate::iterators::merge_iterator::MergeIterator;
 use crate::iterators::two_merge_iterator::TwoMergeIterator;
 use crate::iterators::StorageIterator;
@@ -349,6 +350,28 @@ impl LsmStorageInner {
             });
         }
 
+        for idx in &storage.levels[0].1 {
+            let sst_table = match storage.sstables.get(idx) {
+                Some(sst_table) if sst_table.key_may_contains(&key_slice) => sst_table.clone(),
+                _ => continue,
+            };
+
+            let iter = SsTableIterator::create_and_seek_to_key(sst_table, key_slice)?;
+            if !iter.is_valid() {
+                continue;
+            }
+
+            if iter.key() != key_slice {
+                continue;
+            }
+
+            return Ok(if iter.value().is_empty() {
+                None
+            } else {
+                Some(Bytes::copy_from_slice(iter.value()))
+            });
+        }
+
         Ok(None)
     }
 
@@ -526,13 +549,36 @@ impl LsmStorageInner {
             sst_iters.push(iter.into());
         }
 
-        let iter = LsmIterator::new(
-            TwoMergeIterator::create(
-                MergeIterator::create(mem_iters),
-                MergeIterator::create(sst_iters),
-            )?,
-            upper,
+        let concat_iter = {
+            let mut sstables = vec![];
+            for idx in &state.levels[0].1 {
+                let sst_table = match state.sstables.get(idx) {
+                    Some(sst_table) if sst_table.range_overlap(lower, upper) => sst_table.clone(),
+                    _ => continue,
+                };
+
+                sstables.push(sst_table);
+            }
+
+            let mut concat_iter = SstConcatIterator::create_and_seek_to_key(sstables, key_slice)?;
+            if let Bound::Excluded(x) = lower {
+                if x == key_slice.raw_ref() {
+                    concat_iter.next()?;
+                }
+            }
+
+            if concat_iter.is_valid() {
+                concat_iter
+            } else {
+                SstConcatIterator::create_and_seek_to_first(vec![])?
+            }
+        };
+
+        let a = TwoMergeIterator::create(
+            MergeIterator::create(mem_iters),
+            MergeIterator::create(sst_iters),
         )?;
+        let iter = LsmIterator::new(TwoMergeIterator::create(a, concat_iter)?, upper)?;
 
         Ok(FusedIterator::new(iter))
     }
