@@ -201,17 +201,27 @@ impl LsmStorageInner {
         task: &SimpleLeveledCompactionTask,
     ) -> Result<Vec<Arc<SsTable>>> {
         if task.upper_level.is_some() {
-            let sst_tables = {
+            let mut iter = {
                 let state = self.state.read();
-                task.upper_level_sst_ids
+                let upper_level_iter = task
+                    .upper_level_sst_ids
                     .iter()
-                    .chain(task.lower_level_sst_ids.iter())
                     .flat_map(|id| state.sstables.get(id))
                     .cloned()
-                    .collect::<Vec<_>>()
-            };
+                    .collect::<Vec<_>>();
+                let lower_level_iter = task
+                    .lower_level_sst_ids
+                    .iter()
+                    .flat_map(|id| state.sstables.get(id))
+                    .cloned()
+                    .collect::<Vec<_>>();
+                drop(state);
 
-            let mut iter = SstConcatIterator::create_and_seek_to_first(sst_tables)?;
+                TwoMergeIterator::create(
+                    SstConcatIterator::create_and_seek_to_first(upper_level_iter)?,
+                    SstConcatIterator::create_and_seek_to_first(lower_level_iter)?,
+                )?
+            };
 
             let mut builder = SsTableBuilder::new(self.options.block_size);
             let mut sst_tables = vec![];
