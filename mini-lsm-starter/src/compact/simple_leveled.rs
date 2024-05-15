@@ -33,7 +33,7 @@ impl SimpleLeveledCompactionController {
     /// Returns `None` if no compaction needs to be scheduled. The order of SSTs in the compaction task id vector matters.
     pub fn generate_compaction_task(
         &self,
-        snapshot: &LsmStorageState,
+        _snapshot: &LsmStorageState,
     ) -> Option<SimpleLeveledCompactionTask> {
         if self.options.level0_file_num_compaction_trigger <= snapshot.l0_sstables.len() {
             Some(SimpleLeveledCompactionTask {
