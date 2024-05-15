@@ -350,7 +350,7 @@ impl LsmStorageInner {
             });
         }
 
-        for idx in &storage.levels[0].1 {
+        for idx in storage.levels.iter().flat_map(|(_, ids)| ids) {
             let sst_table = match storage.sstables.get(idx) {
                 Some(sst_table) if sst_table.key_may_contains(&key_slice) => sst_table.clone(),
                 _ => continue,
@@ -386,24 +386,29 @@ impl LsmStorageInner {
             return Err(anyhow!("Key is empty"));
         }
 
-        let storage = self.state.read();
-        match storage.memtable.put(key, value) {
+        let (res, approximate_size) = {
+            let state = self.state.read();
+            let res = state.memtable.put(key, value);
+            (res, state.memtable.approximate_size())
+        };
+        match res {
             Ok(_) => {
-                if self.memtable_reaches_capacity_on_put(&storage) {
+                if self.memtable_reaches_capacity_on_put(approximate_size) {
                     let lock = self.state_lock.lock();
-                    if self.memtable_reaches_capacity_on_put(&storage) {
-                        drop(storage);
+                    if self.memtable_reaches_capacity_on_put(
+                        self.state.read().memtable.approximate_size(),
+                    ) {
                         return self.force_freeze_memtable(&lock);
                     }
                 }
                 Ok(())
             }
-            Err(e) => Err(e),
+            e @ Err(_) => e,
         }
     }
 
-    fn memtable_reaches_capacity_on_put(&self, state: &LsmStorageState) -> bool {
-        self.options.target_sst_size <= state.memtable.approximate_size()
+    fn memtable_reaches_capacity_on_put(&self, size: usize) -> bool {
+        self.options.target_sst_size <= size
     }
 
     /// Remove a key from the storage by writing an empty value.
@@ -550,28 +555,38 @@ impl LsmStorageInner {
         }
 
         let concat_iter = {
-            let mut sstables = vec![];
-            for idx in &state.levels[0].1 {
-                let sst_table = match state.sstables.get(idx) {
-                    Some(sst_table) if sst_table.range_overlap(lower, upper) => sst_table.clone(),
-                    _ => continue,
+            let mut concat_iters = vec![];
+            for ids in state.levels.iter().map(|(_, ids)| ids) {
+                let mut sstables = vec![];
+                for id in ids {
+                    let sst_table = match state.sstables.get(id) {
+                        Some(sst_table) if sst_table.range_overlap(lower, upper) => {
+                            sst_table.clone()
+                        }
+                        _ => continue,
+                    };
+
+                    sstables.push(sst_table);
+                }
+
+                let mut concat_iter =
+                    SstConcatIterator::create_and_seek_to_key(sstables, key_slice)?;
+                if let Bound::Excluded(x) = lower {
+                    if x == key_slice.raw_ref() {
+                        concat_iter.next()?;
+                    }
+                }
+
+                let iter = if concat_iter.is_valid() {
+                    concat_iter
+                } else {
+                    SstConcatIterator::create_and_seek_to_first(vec![])?
                 };
 
-                sstables.push(sst_table);
+                concat_iters.push(iter.into());
             }
 
-            let mut concat_iter = SstConcatIterator::create_and_seek_to_key(sstables, key_slice)?;
-            if let Bound::Excluded(x) = lower {
-                if x == key_slice.raw_ref() {
-                    concat_iter.next()?;
-                }
-            }
-
-            if concat_iter.is_valid() {
-                concat_iter
-            } else {
-                SstConcatIterator::create_and_seek_to_first(vec![])?
-            }
+            MergeIterator::create(concat_iters)
         };
 
         let a = TwoMergeIterator::create(
