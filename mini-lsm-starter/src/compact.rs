@@ -113,6 +113,7 @@ pub enum CompactionOptions {
 impl LsmStorageInner {
     fn compact(&self, task: &CompactionTask) -> Result<Vec<Arc<SsTable>>> {
         match task {
+            CompactionTask::Tiered(task) => self.tiered_compaction(task),
             CompactionTask::ForceFullCompaction {
                 l0_sstables,
                 l1_sstables,
@@ -266,6 +267,66 @@ impl LsmStorageInner {
         } else {
             self.full_compaction(&task.upper_level_sst_ids, &task.lower_level_sst_ids)
         }
+    }
+
+    fn tiered_compaction(&self, task: &TieredCompactionTask) -> Result<Vec<Arc<SsTable>>> {
+        let tiered_sst = {
+            let guard = self.state.read();
+            let mut tiered_sst = vec![];
+            for (_, sst) in &task.tiers {
+                tiered_sst.push(
+                    sst.iter()
+                        .flat_map(|id| guard.sstables.get(id))
+                        .cloned()
+                        .collect::<Vec<_>>(),
+                );
+            }
+            tiered_sst
+        };
+
+        let mut iter = vec![];
+        for ssts in tiered_sst {
+            iter.push(SstConcatIterator::create_and_seek_to_first(ssts)?.into())
+        }
+
+        let mut iter = MergeIterator::create(iter);
+        let mut builder = SsTableBuilder::new(self.options.block_size);
+        let mut sst_builders = vec![];
+        while iter.is_valid() {
+            let key = iter.key();
+            let val = iter.value();
+            if val.is_empty() {
+                iter.next()?;
+            } else {
+                builder.add(key, val);
+                if self.options.target_sst_size <= builder.estimated_size() {
+                    let builder = std::mem::replace(
+                        &mut builder,
+                        SsTableBuilder::new(self.options.block_size),
+                    );
+                    sst_builders.push(builder);
+                }
+                iter.next()?;
+            }
+        }
+
+        sst_builders.push(builder);
+        let mut sst_tables = vec![];
+        for builder in sst_builders {
+            if builder.is_empty() {
+                continue;
+            }
+
+            let sst_id = self.next_sst_id();
+            let sst = builder.build(
+                sst_id,
+                Some(self.block_cache.clone()),
+                self.path_of_sst(sst_id),
+            )?;
+            sst_tables.push(sst.into());
+        }
+
+        Ok(sst_tables)
     }
 
     pub fn force_full_compaction(&self) -> Result<()> {

@@ -488,8 +488,14 @@ impl LsmStorageInner {
         };
 
         let sst_table = builder.build(mem_table.id(), Some(self.block_cache.clone()), sst_path)?;
-        state.l0_sstables.insert(0, mem_table.id());
         state.sstables.insert(mem_table.id(), Arc::new(sst_table));
+        if self.compaction_controller.flush_to_l0() {
+            state.l0_sstables.insert(0, mem_table.id());
+        } else {
+            state
+                .levels
+                .insert(0, (mem_table.id(), vec![mem_table.id()]))
+        }
 
         //更新回去
         let mut lock = self.state.write();
