@@ -32,7 +32,7 @@ impl TieredCompactionController {
         snapshot: &LsmStorageState,
     ) -> Option<TieredCompactionTask> {
         //当层数小于设定层数时，不执行压缩
-        if snapshot.levels.len() <= self.options.num_tiers {
+        if snapshot.levels.len() < self.options.num_tiers {
             return None;
         }
 
@@ -70,15 +70,14 @@ impl TieredCompactionController {
                     count += ids.len()
                 }
             }
-
-            return None;
         }
 
-        //直接合并最高曾，尽量只剩下self.options.num_tiers
+        //直接合并最高层，尽量只剩下self.options.num_tiers
         //the top most
-
         Some(TieredCompactionTask {
-            tiers: snapshot.levels[..snapshot.levels.len() - self.options.num_tiers + 1].to_vec(),
+            tiers: snapshot.levels
+                [..snapshot.levels.len() - self.options.num_tiers + (self.options.num_tiers - 1)]
+                .to_vec(),
             bottom_tier_included: true,
         })
     }
@@ -111,11 +110,4 @@ impl TieredCompactionController {
 
         (snapshot, old_sst_ids)
     }
-}
-
-#[test]
-fn test() {
-    let i: [i32; 4] = [1, 2, 3, 4];
-    println!("{:?}", &i[..4 - 3]);
-    println!("{:?}", &i[..4 - 3 + 1]);
 }

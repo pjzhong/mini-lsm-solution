@@ -1,0 +1,859 @@
+=== Iteration 0 ===
+--- After Flush ---
+L1 (1): [1]
+--- Compaction Task ---
+--- Compaction Task ---
+no compaction triggered
+--- Statistics ---
+Write Amplification: 1/1=1.000x
+Maximum Space Usage: 1/1=1.000x
+Read Amplification: 1x
+
+=== Iteration 1 ===
+--- After Flush ---
+L2 (1): [2]
+L1 (1): [1]
+--- Compaction Task ---
+--- Compaction Task ---
+no compaction triggered
+--- Statistics ---
+Write Amplification: 2/2=1.000x
+Maximum Space Usage: 2/2=1.000x
+Read Amplification: 2x
+
+=== Iteration 2 ===
+--- After Flush ---
+L3 (1): [3]
+L2 (1): [2]
+L1 (1): [1]
+--- Compaction Task ---
+--- Compaction Task ---
+L3 [3] L2 [2] L1 [1] -> [4, 5, 6]
+--- After Compaction ---
+L4 (3): [3, 2, 1]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 6/3=2.000x
+Maximum Space Usage: 6/3=2.000x
+Read Amplification: 1x
+
+=== Iteration 3 ===
+--- After Flush ---
+L7 (1): [7]
+L4 (3): [3, 2, 1]
+--- Compaction Task ---
+--- Compaction Task ---
+no compaction triggered
+--- Statistics ---
+Write Amplification: 7/4=1.750x
+Maximum Space Usage: 6/4=1.500x
+Read Amplification: 2x
+
+=== Iteration 4 ===
+--- After Flush ---
+L8 (1): [8]
+L7 (1): [7]
+L4 (3): [3, 2, 1]
+--- Compaction Task ---
+--- Compaction Task ---
+L8 [8] L7 [7] -> [9, 10]
+--- After Compaction ---
+L9 (2): [8, 7]
+L4 (3): [3, 2, 1]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 10/5=2.000x
+Maximum Space Usage: 7/5=1.400x
+Read Amplification: 2x
+
+=== Iteration 5 ===
+--- After Flush ---
+L11 (1): [11]
+L9 (2): [8, 7]
+L4 (3): [3, 2, 1]
+--- Compaction Task ---
+--- Compaction Task ---
+L11 [11] L9 [9, 10] -> [12, 13, 14]
+--- After Compaction ---
+L12 (3): [11, 9, 10]
+L4 (3): [3, 2, 1]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 14/6=2.333x
+Maximum Space Usage: 9/6=1.500x
+Read Amplification: 2x
+
+=== Iteration 6 ===
+--- After Flush ---
+L15 (1): [15]
+L12 (3): [11, 9, 10]
+L4 (3): [3, 2, 1]
+--- Compaction Task ---
+--- Compaction Task ---
+L15 [15] L12 [12, 13, 14] L4 [4, 5, 6] -> [16, 17, 18, 19, 20, 21, 22]
+--- After Compaction ---
+L16 (7): [15, 12, 13, 14, 4, 5, 6]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 22/7=3.143x
+Maximum Space Usage: 14/7=2.000x
+Read Amplification: 1x
+
+=== Iteration 7 ===
+--- After Flush ---
+L23 (1): [23]
+L16 (7): [15, 12, 13, 14, 4, 5, 6]
+--- Compaction Task ---
+--- Compaction Task ---
+no compaction triggered
+--- Statistics ---
+Write Amplification: 23/8=2.875x
+Maximum Space Usage: 14/8=1.750x
+Read Amplification: 2x
+
+=== Iteration 8 ===
+--- After Flush ---
+L24 (1): [24]
+L23 (1): [23]
+L16 (7): [15, 12, 13, 14, 4, 5, 6]
+--- Compaction Task ---
+--- Compaction Task ---
+L24 [24] L23 [23] -> [25, 26]
+--- After Compaction ---
+L25 (2): [24, 23]
+L16 (7): [15, 12, 13, 14, 4, 5, 6]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 26/9=2.889x
+Maximum Space Usage: 14/9=1.556x
+Read Amplification: 2x
+
+=== Iteration 9 ===
+--- After Flush ---
+L27 (1): [27]
+L25 (2): [24, 23]
+L16 (7): [15, 12, 13, 14, 4, 5, 6]
+--- Compaction Task ---
+--- Compaction Task ---
+L27 [27] L25 [25, 26] -> [28, 29, 30]
+--- After Compaction ---
+L28 (3): [27, 25, 26]
+L16 (7): [15, 12, 13, 14, 4, 5, 6]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 30/10=3.000x
+Maximum Space Usage: 14/10=1.400x
+Read Amplification: 2x
+
+=== Iteration 10 ===
+--- After Flush ---
+L31 (1): [31]
+L28 (3): [27, 25, 26]
+L16 (7): [15, 12, 13, 14, 4, 5, 6]
+--- Compaction Task ---
+--- Compaction Task ---
+L31 [31] L28 [28, 29, 30] -> [32, 33, 34, 35]
+--- After Compaction ---
+L32 (4): [31, 28, 29, 30]
+L16 (7): [15, 12, 13, 14, 4, 5, 6]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 35/11=3.182x
+Maximum Space Usage: 15/11=1.364x
+Read Amplification: 2x
+
+=== Iteration 11 ===
+--- After Flush ---
+L36 (1): [36]
+L32 (4): [31, 28, 29, 30]
+L16 (7): [15, 12, 13, 14, 4, 5, 6]
+--- Compaction Task ---
+--- Compaction Task ---
+L36 [36] L32 [32, 33, 34, 35] -> [37, 38, 39, 40, 41]
+--- After Compaction ---
+L37 (5): [36, 32, 33, 34, 35]
+L16 (7): [15, 12, 13, 14, 4, 5, 6]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 41/12=3.417x
+Maximum Space Usage: 17/12=1.417x
+Read Amplification: 2x
+
+=== Iteration 12 ===
+--- After Flush ---
+L42 (1): [42]
+L37 (5): [36, 32, 33, 34, 35]
+L16 (7): [15, 12, 13, 14, 4, 5, 6]
+--- Compaction Task ---
+--- Compaction Task ---
+L42 [42] L37 [37, 38, 39, 40, 41] -> [43, 44, 45, 46, 47, 48]
+--- After Compaction ---
+L43 (6): [42, 37, 38, 39, 40, 41]
+L16 (7): [15, 12, 13, 14, 4, 5, 6]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 48/13=3.692x
+Maximum Space Usage: 19/13=1.462x
+Read Amplification: 2x
+
+=== Iteration 13 ===
+--- After Flush ---
+L49 (1): [49]
+L43 (6): [42, 37, 38, 39, 40, 41]
+L16 (7): [15, 12, 13, 14, 4, 5, 6]
+--- Compaction Task ---
+--- Compaction Task ---
+L49 [49] L43 [43, 44, 45, 46, 47, 48] -> [50, 51, 52, 53, 54, 55, 56]
+--- After Compaction ---
+L50 (7): [49, 43, 44, 45, 46, 47, 48]
+L16 (7): [15, 12, 13, 14, 4, 5, 6]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 56/14=4.000x
+Maximum Space Usage: 21/14=1.500x
+Read Amplification: 2x
+
+=== Iteration 14 ===
+--- After Flush ---
+L57 (1): [57]
+L50 (7): [49, 43, 44, 45, 46, 47, 48]
+L16 (7): [15, 12, 13, 14, 4, 5, 6]
+--- Compaction Task ---
+--- Compaction Task ---
+L57 [57] L50 [50, 51, 52, 53, 54, 55, 56] L16 [16, 17, 18, 19, 20, 21, 22] -> [58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- After Compaction ---
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 72/15=4.800x
+Maximum Space Usage: 30/15=2.000x
+Read Amplification: 1x
+
+=== Iteration 15 ===
+--- After Flush ---
+L73 (1): [73]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+--- Compaction Task ---
+no compaction triggered
+--- Statistics ---
+Write Amplification: 73/16=4.562x
+Maximum Space Usage: 30/16=1.875x
+Read Amplification: 2x
+
+=== Iteration 16 ===
+--- After Flush ---
+L74 (1): [74]
+L73 (1): [73]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+--- Compaction Task ---
+L74 [74] L73 [73] -> [75, 76]
+--- After Compaction ---
+L75 (2): [74, 73]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 76/17=4.471x
+Maximum Space Usage: 30/17=1.765x
+Read Amplification: 2x
+
+=== Iteration 17 ===
+--- After Flush ---
+L77 (1): [77]
+L75 (2): [74, 73]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+--- Compaction Task ---
+L77 [77] L75 [75, 76] -> [78, 79, 80]
+--- After Compaction ---
+L78 (3): [77, 75, 76]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 80/18=4.444x
+Maximum Space Usage: 30/18=1.667x
+Read Amplification: 2x
+
+=== Iteration 18 ===
+--- After Flush ---
+L81 (1): [81]
+L78 (3): [77, 75, 76]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+--- Compaction Task ---
+L81 [81] L78 [78, 79, 80] -> [82, 83, 84, 85]
+--- After Compaction ---
+L82 (4): [81, 78, 79, 80]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 85/19=4.474x
+Maximum Space Usage: 30/19=1.579x
+Read Amplification: 2x
+
+=== Iteration 19 ===
+--- After Flush ---
+L86 (1): [86]
+L82 (4): [81, 78, 79, 80]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+--- Compaction Task ---
+L86 [86] L82 [82, 83, 84, 85] -> [87, 88, 89, 90, 91]
+--- After Compaction ---
+L87 (5): [86, 82, 83, 84, 85]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 91/20=4.550x
+Maximum Space Usage: 30/20=1.500x
+Read Amplification: 2x
+
+=== Iteration 20 ===
+--- After Flush ---
+L92 (1): [92]
+L87 (5): [86, 82, 83, 84, 85]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+--- Compaction Task ---
+L92 [92] L87 [87, 88, 89, 90, 91] -> [93, 94, 95, 96, 97, 98]
+--- After Compaction ---
+L93 (6): [92, 87, 88, 89, 90, 91]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 98/21=4.667x
+Maximum Space Usage: 30/21=1.429x
+Read Amplification: 2x
+
+=== Iteration 21 ===
+--- After Flush ---
+L99 (1): [99]
+L93 (6): [92, 87, 88, 89, 90, 91]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+--- Compaction Task ---
+L99 [99] L93 [93, 94, 95, 96, 97, 98] -> [100, 101, 102, 103, 104, 105, 106]
+--- After Compaction ---
+L100 (7): [99, 93, 94, 95, 96, 97, 98]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 106/22=4.818x
+Maximum Space Usage: 30/22=1.364x
+Read Amplification: 2x
+
+=== Iteration 22 ===
+--- After Flush ---
+L107 (1): [107]
+L100 (7): [99, 93, 94, 95, 96, 97, 98]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+--- Compaction Task ---
+L107 [107] L100 [100, 101, 102, 103, 104, 105, 106] -> [108, 109, 110, 111, 112, 113, 114, 115]
+--- After Compaction ---
+L108 (8): [107, 100, 101, 102, 103, 104, 105, 106]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 115/23=5.000x
+Maximum Space Usage: 31/23=1.348x
+Read Amplification: 2x
+
+=== Iteration 23 ===
+--- After Flush ---
+L116 (1): [116]
+L108 (8): [107, 100, 101, 102, 103, 104, 105, 106]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+--- Compaction Task ---
+L116 [116] L108 [108, 109, 110, 111, 112, 113, 114, 115] -> [117, 118, 119, 120, 121, 122, 123, 124, 125]
+--- After Compaction ---
+L117 (9): [116, 108, 109, 110, 111, 112, 113, 114, 115]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 125/24=5.208x
+Maximum Space Usage: 33/24=1.375x
+Read Amplification: 2x
+
+=== Iteration 24 ===
+--- After Flush ---
+L126 (1): [126]
+L117 (9): [116, 108, 109, 110, 111, 112, 113, 114, 115]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+--- Compaction Task ---
+L126 [126] L117 [117, 118, 119, 120, 121, 122, 123, 124, 125] -> [127, 128, 129, 130, 131, 132, 133, 134, 135, 136]
+--- After Compaction ---
+L127 (10): [126, 117, 118, 119, 120, 121, 122, 123, 124, 125]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 136/25=5.440x
+Maximum Space Usage: 35/25=1.400x
+Read Amplification: 2x
+
+=== Iteration 25 ===
+--- After Flush ---
+L137 (1): [137]
+L127 (10): [126, 117, 118, 119, 120, 121, 122, 123, 124, 125]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+--- Compaction Task ---
+L137 [137] L127 [127, 128, 129, 130, 131, 132, 133, 134, 135, 136] -> [138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148]
+--- After Compaction ---
+L138 (11): [137, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 148/26=5.692x
+Maximum Space Usage: 37/26=1.423x
+Read Amplification: 2x
+
+=== Iteration 26 ===
+--- After Flush ---
+L149 (1): [149]
+L138 (11): [137, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+--- Compaction Task ---
+L149 [149] L138 [138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148] -> [150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161]
+--- After Compaction ---
+L150 (12): [149, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 161/27=5.963x
+Maximum Space Usage: 39/27=1.444x
+Read Amplification: 2x
+
+=== Iteration 27 ===
+--- After Flush ---
+L162 (1): [162]
+L150 (12): [149, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+--- Compaction Task ---
+L162 [162] L150 [150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161] -> [163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175]
+--- After Compaction ---
+L163 (13): [162, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 175/28=6.250x
+Maximum Space Usage: 41/28=1.464x
+Read Amplification: 2x
+
+=== Iteration 28 ===
+--- After Flush ---
+L176 (1): [176]
+L163 (13): [162, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+--- Compaction Task ---
+L176 [176] L163 [163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175] -> [177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190]
+--- After Compaction ---
+L177 (14): [176, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 190/29=6.552x
+Maximum Space Usage: 43/29=1.483x
+Read Amplification: 2x
+
+=== Iteration 29 ===
+--- After Flush ---
+L191 (1): [191]
+L177 (14): [176, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+--- Compaction Task ---
+L191 [191] L177 [177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190] -> [192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206]
+--- After Compaction ---
+L192 (15): [191, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 206/30=6.867x
+Maximum Space Usage: 45/30=1.500x
+Read Amplification: 2x
+
+=== Iteration 30 ===
+--- After Flush ---
+L207 (1): [207]
+L192 (15): [191, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190]
+L58 (15): [57, 50, 51, 52, 53, 54, 55, 56, 16, 17, 18, 19, 20, 21, 22]
+--- Compaction Task ---
+--- Compaction Task ---
+L207 [207] L192 [192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206] L58 [58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72] -> [208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238]
+--- After Compaction ---
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 238/31=7.677x
+Maximum Space Usage: 62/31=2.000x
+Read Amplification: 1x
+
+=== Iteration 31 ===
+--- After Flush ---
+L239 (1): [239]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+no compaction triggered
+--- Statistics ---
+Write Amplification: 239/32=7.469x
+Maximum Space Usage: 62/32=1.938x
+Read Amplification: 2x
+
+=== Iteration 32 ===
+--- After Flush ---
+L240 (1): [240]
+L239 (1): [239]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L240 [240] L239 [239] -> [241, 242]
+--- After Compaction ---
+L241 (2): [240, 239]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 242/33=7.333x
+Maximum Space Usage: 62/33=1.879x
+Read Amplification: 2x
+
+=== Iteration 33 ===
+--- After Flush ---
+L243 (1): [243]
+L241 (2): [240, 239]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L243 [243] L241 [241, 242] -> [244, 245, 246]
+--- After Compaction ---
+L244 (3): [243, 241, 242]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 246/34=7.235x
+Maximum Space Usage: 62/34=1.824x
+Read Amplification: 2x
+
+=== Iteration 34 ===
+--- After Flush ---
+L247 (1): [247]
+L244 (3): [243, 241, 242]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L247 [247] L244 [244, 245, 246] -> [248, 249, 250, 251]
+--- After Compaction ---
+L248 (4): [247, 244, 245, 246]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 251/35=7.171x
+Maximum Space Usage: 62/35=1.771x
+Read Amplification: 2x
+
+=== Iteration 35 ===
+--- After Flush ---
+L252 (1): [252]
+L248 (4): [247, 244, 245, 246]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L252 [252] L248 [248, 249, 250, 251] -> [253, 254, 255, 256, 257]
+--- After Compaction ---
+L253 (5): [252, 248, 249, 250, 251]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 257/36=7.139x
+Maximum Space Usage: 62/36=1.722x
+Read Amplification: 2x
+
+=== Iteration 36 ===
+--- After Flush ---
+L258 (1): [258]
+L253 (5): [252, 248, 249, 250, 251]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L258 [258] L253 [253, 254, 255, 256, 257] -> [259, 260, 261, 262, 263, 264]
+--- After Compaction ---
+L259 (6): [258, 253, 254, 255, 256, 257]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 264/37=7.135x
+Maximum Space Usage: 62/37=1.676x
+Read Amplification: 2x
+
+=== Iteration 37 ===
+--- After Flush ---
+L265 (1): [265]
+L259 (6): [258, 253, 254, 255, 256, 257]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L265 [265] L259 [259, 260, 261, 262, 263, 264] -> [266, 267, 268, 269, 270, 271, 272]
+--- After Compaction ---
+L266 (7): [265, 259, 260, 261, 262, 263, 264]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 272/38=7.158x
+Maximum Space Usage: 62/38=1.632x
+Read Amplification: 2x
+
+=== Iteration 38 ===
+--- After Flush ---
+L273 (1): [273]
+L266 (7): [265, 259, 260, 261, 262, 263, 264]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L273 [273] L266 [266, 267, 268, 269, 270, 271, 272] -> [274, 275, 276, 277, 278, 279, 280, 281]
+--- After Compaction ---
+L274 (8): [273, 266, 267, 268, 269, 270, 271, 272]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 281/39=7.205x
+Maximum Space Usage: 62/39=1.590x
+Read Amplification: 2x
+
+=== Iteration 39 ===
+--- After Flush ---
+L282 (1): [282]
+L274 (8): [273, 266, 267, 268, 269, 270, 271, 272]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L282 [282] L274 [274, 275, 276, 277, 278, 279, 280, 281] -> [283, 284, 285, 286, 287, 288, 289, 290, 291]
+--- After Compaction ---
+L283 (9): [282, 274, 275, 276, 277, 278, 279, 280, 281]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 291/40=7.275x
+Maximum Space Usage: 62/40=1.550x
+Read Amplification: 2x
+
+=== Iteration 40 ===
+--- After Flush ---
+L292 (1): [292]
+L283 (9): [282, 274, 275, 276, 277, 278, 279, 280, 281]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L292 [292] L283 [283, 284, 285, 286, 287, 288, 289, 290, 291] -> [293, 294, 295, 296, 297, 298, 299, 300, 301, 302]
+--- After Compaction ---
+L293 (10): [292, 283, 284, 285, 286, 287, 288, 289, 290, 291]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 302/41=7.366x
+Maximum Space Usage: 62/41=1.512x
+Read Amplification: 2x
+
+=== Iteration 41 ===
+--- After Flush ---
+L303 (1): [303]
+L293 (10): [292, 283, 284, 285, 286, 287, 288, 289, 290, 291]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L303 [303] L293 [293, 294, 295, 296, 297, 298, 299, 300, 301, 302] -> [304, 305, 306, 307, 308, 309, 310, 311, 312, 313, 314]
+--- After Compaction ---
+L304 (11): [303, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 314/42=7.476x
+Maximum Space Usage: 62/42=1.476x
+Read Amplification: 2x
+
+=== Iteration 42 ===
+--- After Flush ---
+L315 (1): [315]
+L304 (11): [303, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L315 [315] L304 [304, 305, 306, 307, 308, 309, 310, 311, 312, 313, 314] -> [316, 317, 318, 319, 320, 321, 322, 323, 324, 325, 326, 327]
+--- After Compaction ---
+L316 (12): [315, 304, 305, 306, 307, 308, 309, 310, 311, 312, 313, 314]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 327/43=7.605x
+Maximum Space Usage: 62/43=1.442x
+Read Amplification: 2x
+
+=== Iteration 43 ===
+--- After Flush ---
+L328 (1): [328]
+L316 (12): [315, 304, 305, 306, 307, 308, 309, 310, 311, 312, 313, 314]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L328 [328] L316 [316, 317, 318, 319, 320, 321, 322, 323, 324, 325, 326, 327] -> [329, 330, 331, 332, 333, 334, 335, 336, 337, 338, 339, 340, 341]
+--- After Compaction ---
+L329 (13): [328, 316, 317, 318, 319, 320, 321, 322, 323, 324, 325, 326, 327]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 341/44=7.750x
+Maximum Space Usage: 62/44=1.409x
+Read Amplification: 2x
+
+=== Iteration 44 ===
+--- After Flush ---
+L342 (1): [342]
+L329 (13): [328, 316, 317, 318, 319, 320, 321, 322, 323, 324, 325, 326, 327]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L342 [342] L329 [329, 330, 331, 332, 333, 334, 335, 336, 337, 338, 339, 340, 341] -> [343, 344, 345, 346, 347, 348, 349, 350, 351, 352, 353, 354, 355, 356]
+--- After Compaction ---
+L343 (14): [342, 329, 330, 331, 332, 333, 334, 335, 336, 337, 338, 339, 340, 341]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 356/45=7.911x
+Maximum Space Usage: 62/45=1.378x
+Read Amplification: 2x
+
+=== Iteration 45 ===
+--- After Flush ---
+L357 (1): [357]
+L343 (14): [342, 329, 330, 331, 332, 333, 334, 335, 336, 337, 338, 339, 340, 341]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L357 [357] L343 [343, 344, 345, 346, 347, 348, 349, 350, 351, 352, 353, 354, 355, 356] -> [358, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372]
+--- After Compaction ---
+L358 (15): [357, 343, 344, 345, 346, 347, 348, 349, 350, 351, 352, 353, 354, 355, 356]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 372/46=8.087x
+Maximum Space Usage: 62/46=1.348x
+Read Amplification: 2x
+
+=== Iteration 46 ===
+--- After Flush ---
+L373 (1): [373]
+L358 (15): [357, 343, 344, 345, 346, 347, 348, 349, 350, 351, 352, 353, 354, 355, 356]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L373 [373] L358 [358, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372] -> [374, 375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389]
+--- After Compaction ---
+L374 (16): [373, 358, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 389/47=8.277x
+Maximum Space Usage: 63/47=1.340x
+Read Amplification: 2x
+
+=== Iteration 47 ===
+--- After Flush ---
+L390 (1): [390]
+L374 (16): [373, 358, 359, 360, 361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L390 [390] L374 [374, 375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389] -> [391, 392, 393, 394, 395, 396, 397, 398, 399, 400, 401, 402, 403, 404, 405, 406, 407]
+--- After Compaction ---
+L391 (17): [390, 374, 375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 407/48=8.479x
+Maximum Space Usage: 65/48=1.354x
+Read Amplification: 2x
+
+=== Iteration 48 ===
+--- After Flush ---
+L408 (1): [408]
+L391 (17): [390, 374, 375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L408 [408] L391 [391, 392, 393, 394, 395, 396, 397, 398, 399, 400, 401, 402, 403, 404, 405, 406, 407] -> [409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 421, 422, 423, 424, 425, 426]
+--- After Compaction ---
+L409 (18): [408, 391, 392, 393, 394, 395, 396, 397, 398, 399, 400, 401, 402, 403, 404, 405, 406, 407]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 426/49=8.694x
+Maximum Space Usage: 67/49=1.367x
+Read Amplification: 2x
+
+=== Iteration 49 ===
+--- After Flush ---
+L427 (1): [427]
+L409 (18): [408, 391, 392, 393, 394, 395, 396, 397, 398, 399, 400, 401, 402, 403, 404, 405, 406, 407]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+--- Compaction Task ---
+L427 [427] L409 [409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 421, 422, 423, 424, 425, 426] -> [428, 429, 430, 431, 432, 433, 434, 435, 436, 437, 438, 439, 440, 441, 442, 443, 444, 445, 446]
+--- After Compaction ---
+L428 (19): [427, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420, 421, 422, 423, 424, 425, 426]
+L208 (31): [207, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72]
+--- Compaction Task ---
+1 compaction triggered in this iteration
+--- Statistics ---
+Write Amplification: 446/50=8.920x
+Maximum Space Usage: 69/50=1.380x
+Read Amplification: 2x
+
