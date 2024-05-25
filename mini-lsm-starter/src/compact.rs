@@ -114,13 +114,49 @@ pub enum CompactionOptions {
 impl LsmStorageInner {
     fn compact(&self, task: &CompactionTask) -> Result<Vec<Arc<SsTable>>> {
         match task {
+            CompactionTask::Leveled(task) => self.leveled_compaction(task),
             CompactionTask::Tiered(task) => self.tiered_compaction(task),
             CompactionTask::ForceFullCompaction {
                 l0_sstables,
                 l1_sstables,
             } => self.full_compaction(l0_sstables, l1_sstables),
             CompactionTask::Simple(task) => self.simple_leveled_compaction(task),
-            _ => unimplemented!(),
+        }
+    }
+
+    fn sst_ids_to_tables(snapshot: &LsmStorageState, ids: &[usize]) -> Vec<Arc<SsTable>> {
+        ids.iter()
+            .flat_map(|id| snapshot.sstables.get(id))
+            .cloned()
+            .collect::<Vec<_>>()
+    }
+
+    fn leveled_compaction(&self, task: &LeveledCompactionTask) -> Result<Vec<Arc<SsTable>>> {
+        if let Some(_upper_level) = task.upper_level {
+            todo!("还没实现")
+        } else {
+            let iter = {
+                let read = self.state.read();
+                let l0_tables = Self::sst_ids_to_tables(&read, &task.upper_level_sst_ids);
+                let lower_level_tables = Self::sst_ids_to_tables(&read, &task.lower_level_sst_ids);
+                drop(read);
+
+                let merge_iter = {
+                    let mut iter = Vec::with_capacity(l0_tables.len());
+                    for table in l0_tables {
+                        iter.push(SsTableIterator::create_and_seek_to_first(table)?.into());
+                    }
+
+                    MergeIterator::create(iter)
+                };
+
+                let sst_conact_iter =
+                    SstConcatIterator::create_and_seek_to_first(lower_level_tables)?;
+
+                TwoMergeIterator::create(merge_iter, sst_conact_iter)?
+            };
+
+            self.iter_compaction(iter)
         }
     }
 
