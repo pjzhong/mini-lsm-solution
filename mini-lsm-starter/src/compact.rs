@@ -132,8 +132,22 @@ impl LsmStorageInner {
     }
 
     fn leveled_compaction(&self, task: &LeveledCompactionTask) -> Result<Vec<Arc<SsTable>>> {
-        if let Some(_upper_level) = task.upper_level {
-            todo!("还没实现")
+        if task.upper_level.is_some() {
+            let iter = {
+                let read = self.state.read();
+                let upper_level_tables = Self::sst_ids_to_tables(&read, &task.upper_level_sst_ids);
+                let lower_level_tables = Self::sst_ids_to_tables(&read, &task.lower_level_sst_ids);
+                drop(read);
+
+                let upper_sst_conact_iter =
+                    SstConcatIterator::create_and_seek_to_first(upper_level_tables)?;
+                let lower_sst_conact_iter =
+                    SstConcatIterator::create_and_seek_to_first(lower_level_tables)?;
+
+                TwoMergeIterator::create(upper_sst_conact_iter, lower_sst_conact_iter)?
+            };
+
+            self.iter_compaction(iter)
         } else {
             let iter = {
                 let read = self.state.read();
