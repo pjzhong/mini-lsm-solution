@@ -381,21 +381,22 @@ impl LsmStorageInner {
             let _state_lock = self.state_lock.lock();
             let mut state = self.state.write();
 
-            let (mut new_state, old_sst_ids) = self
-                .compaction_controller
-                .apply_compaction_result(&state, &task, &ids);
-
-            for id in &old_sst_ids {
-                let remove = new_state.sstables.remove(id);
-                assert!(remove.is_some());
-            }
-
+            let mut snapshost = state.as_ref().clone();
             for sst_table in sst_tables {
-                let prev = new_state.sstables.insert(sst_table.sst_id(), sst_table);
+                let prev = snapshost.sstables.insert(sst_table.sst_id(), sst_table);
                 assert!(prev.is_none());
             }
 
-            *state = new_state.into();
+            let (mut snapshost, old_sst_ids) = self
+                .compaction_controller
+                .apply_compaction_result(&snapshost, &task, &ids);
+
+            for id in &old_sst_ids {
+                let remove = snapshost.sstables.remove(id);
+                assert!(remove.is_some());
+            }
+
+            *state = snapshost.into();
 
             old_sst_ids
         };
