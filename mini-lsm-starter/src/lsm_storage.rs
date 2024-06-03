@@ -176,6 +176,19 @@ impl MiniLsm {
             }
         }
 
+        if self.inner.options.enable_wal {
+            unimplemented!()
+        } else {
+            if !self.inner.state.read().memtable.is_empty() {
+                self.inner
+                    .force_freeze_memtable(&self.inner.state_lock.lock())?;
+            }
+
+            while !self.inner.state.read().imm_memtables.is_empty() {
+                self.inner.force_flush_next_imm_memtable()?;
+            }
+        }
+
         Ok(())
     }
 
@@ -476,7 +489,7 @@ impl LsmStorageInner {
         //更新state
         //完成
 
-        let _state_lock_observer = self.state_lock.lock();
+        let state_lock_observer = self.state_lock.lock();
 
         //创建快照
         let mut state = {
@@ -515,7 +528,7 @@ impl LsmStorageInner {
         }
 
         if let Some(manifest) = self.manifest.as_ref() {
-            manifest.add_record(&_state_lock_observer, ManifestRecord::Flush(sst_id))?;
+            manifest.add_record(&state_lock_observer, ManifestRecord::Flush(sst_id))?;
         }
 
         Ok(())

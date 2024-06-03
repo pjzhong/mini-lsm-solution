@@ -47,8 +47,13 @@ impl Manifest {
         let records = if buf.is_empty() {
             vec![]
         } else {
-            let mut records = serde_json::Deserializer::from_slice(&buf);
-            Vec::<ManifestRecord>::deserialize(&mut records)?
+            let de_sers = serde_json::Deserializer::from_slice(&buf).into_iter::<ManifestRecord>();
+            let mut records = vec![];
+            for res in de_sers {
+                records.push(res?);
+            }
+
+            records
         };
 
         Ok((
