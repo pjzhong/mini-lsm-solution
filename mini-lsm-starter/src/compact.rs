@@ -401,8 +401,7 @@ impl LsmStorageInner {
                 .apply_compaction_result(&snapshost, &task, &ids);
 
             for id in &old_sst_ids {
-                let remove = snapshost.sstables.remove(id);
-                assert!(remove.is_some());
+                snapshost.sstables.remove(id);
             }
 
             *state = snapshost.into();

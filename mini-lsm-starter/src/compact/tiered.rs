@@ -100,7 +100,10 @@ impl TieredCompactionController {
             .map(|(index, _)| index)
         {
             snapshot.levels.insert(index, (output[0], output.to_vec()))
+        } else {
+            snapshot.levels.insert(0, (output[0], output.to_vec()))
         }
+
         for (tiered_id, ids) in &task.tiers {
             old_tiered.insert(*tiered_id);
             old_sst_ids.extend_from_slice(ids);

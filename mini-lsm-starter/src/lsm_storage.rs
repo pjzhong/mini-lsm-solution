@@ -26,7 +26,7 @@ use crate::lsm_iterator::{FusedIterator, LsmIterator};
 use crate::manifest::{Manifest, ManifestRecord};
 use crate::mem_table::MemTable;
 use crate::mvcc::LsmMvccInner;
-use crate::table::{SsTable, SsTableBuilder, SsTableIterator};
+use crate::table::{FileObject, SsTable, SsTableBuilder, SsTableIterator};
 
 pub type BlockCache = moka::sync::Cache<(usize, usize), Arc<Block>>;
 
@@ -278,8 +278,6 @@ impl LsmStorageInner {
 
         fs::create_dir_all(path)?;
 
-        let (manifest, records) = Manifest::recover(Self::path_of_manifest_static(path))?;
-
         let state = LsmStorageState::create(&options);
 
         let compaction_controller = match &options.compaction_options {
@@ -295,18 +293,20 @@ impl LsmStorageInner {
             CompactionOptions::NoCompaction => CompactionController::NoCompaction,
         };
 
-        let storage = Self {
+        let mut storage = Self {
             state: Arc::new(RwLock::new(Arc::new(state))),
             state_lock: Mutex::new(()),
             path: path.to_path_buf(),
             block_cache: Arc::new(BlockCache::new(1024)),
             next_sst_id: AtomicUsize::new(1),
             compaction_controller,
-            manifest: Some(manifest),
+            manifest: None,
             options: options.into(),
             mvcc: None,
             compaction_filters: Arc::new(Mutex::new(Vec::new())),
         };
+
+        recover(&mut storage)?;
 
         Ok(storage)
     }
@@ -448,7 +448,7 @@ impl LsmStorageInner {
     }
 
     pub(crate) fn path_of_manifest(&self) -> PathBuf {
-        self.path.join("MANIFEST")
+        Self::path_of_manifest_static(&self.path)
     }
 
     pub(crate) fn path_of_manifest_static(path: impl AsRef<Path>) -> PathBuf {
@@ -507,11 +507,7 @@ impl LsmStorageInner {
 
         let mut builder = SsTableBuilder::new(self.options.block_size);
         mem_table.flush(&mut builder)?;
-        let sst_path = {
-            let mut sst_path = self.path.clone();
-            sst_path.push(format!("{}.sst", sst_id));
-            sst_path
-        };
+        let sst_path = self.path_of_sst(sst_id);
 
         let sst_table = builder.build(sst_id, Some(self.block_cache.clone()), sst_path)?;
         state.sstables.insert(sst_id, Arc::new(sst_table));
@@ -633,4 +629,58 @@ impl LsmStorageInner {
 
         Ok(FusedIterator::new(iter))
     }
+}
+
+fn recover(storage: &mut LsmStorageInner) -> Result<(), anyhow::Error> {
+    let (manifest, records) = Manifest::recover(storage.path_of_manifest())?;
+
+    let mut snapshot: LsmStorageState = storage.state.read().as_ref().clone();
+    for record in records {
+        match record {
+            ManifestRecord::Flush(id) => {
+                let path = storage.path_of_sst(id);
+
+                if path.is_file() {
+                    let sst = FileObject::open(&path)?;
+                    let sst = SsTable::open(id, Some(storage.block_cache.clone()), sst)?;
+                    snapshot.l0_sstables.insert(0, id);
+                    snapshot.sstables.insert(sst.sst_id(), sst.into());
+                }
+            }
+            ManifestRecord::Compaction(task, sst_ids) => {
+                let (snap_shot, _) = storage
+                    .compaction_controller
+                    .apply_compaction_result(&snapshot, &task, &sst_ids);
+                snapshot = snap_shot;
+            }
+            ManifestRecord::NewMemtable(_) => todo!(),
+        }
+    }
+
+    let mut max_id = 0;
+    for id in snapshot
+        .levels
+        .iter()
+        .flat_map(|(_, ids)| ids.iter())
+        .chain(snapshot.l0_sstables.iter())
+    {
+        let id = *id;
+        max_id = max_id.max(id);
+        let path = storage.path_of_sst(id);
+
+        let sst = FileObject::open(&path)?;
+        let sst = SsTable::open(id, Some(storage.block_cache.clone()), sst)?;
+        snapshot.sstables.insert(sst.sst_id(), sst.into());
+    }
+
+    {
+        let mut write_lock = storage.state.write();
+        snapshot.memtable = MemTable::create(max_id + 1).into();
+        storage.next_sst_id = (snapshot.memtable.id() + 1).into();
+        *write_lock = snapshot.into();
+    }
+
+    storage.manifest = Some(manifest);
+
+    Ok(())
 }

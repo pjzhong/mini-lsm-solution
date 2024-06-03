@@ -28,7 +28,7 @@ enum CompactionStrategy {
 struct Args {
     #[arg(long, default_value = "lsm.db")]
     path: PathBuf,
-    #[arg(long, default_value = "leveled")]
+    #[arg(long, default_value = "tiered")]
     compaction: CompactionStrategy,
     #[arg(long)]
     enable_wal: bool,
