@@ -21,6 +21,7 @@ use crate::iterators::two_merge_iterator::TwoMergeIterator;
 use crate::iterators::StorageIterator;
 use crate::key::KeySlice;
 use crate::lsm_storage::{LsmStorageInner, LsmStorageState};
+use crate::manifest;
 use crate::table::{SsTable, SsTableBuilder, SsTableIterator};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -325,7 +326,7 @@ impl LsmStorageInner {
         println!("force full compaction: {:?}", compaction_task);
 
         {
-            let _state_lock = self.state_lock.lock();
+            let state_lock = self.state_lock.lock();
             let mut state = self.state.write();
             let mut snapshot = state.as_ref().clone();
 
@@ -345,6 +346,14 @@ impl LsmStorageInner {
             snapshot.levels[0].1.clone_from(&ids);
 
             *state = Arc::new(snapshot);
+            drop(state);
+
+            if let Some(manifest) = self.manifest.as_ref() {
+                manifest.add_record(
+                    &state_lock,
+                    manifest::ManifestRecord::Compaction(compaction_task, ids.clone()),
+                )?;
+            }
         }
 
         for id in l0_sstables.iter().chain(l0_sstables.iter()) {
@@ -378,7 +387,7 @@ impl LsmStorageInner {
             .collect::<Vec<_>>();
 
         let old_sst_ids = {
-            let _state_lock = self.state_lock.lock();
+            let state_lock = self.state_lock.lock();
             let mut state = self.state.write();
 
             let mut snapshost = state.as_ref().clone();
@@ -397,6 +406,14 @@ impl LsmStorageInner {
             }
 
             *state = snapshost.into();
+            drop(state);
+
+            if let Some(manifest) = self.manifest.as_ref() {
+                manifest.add_record(
+                    &state_lock,
+                    manifest::ManifestRecord::Compaction(task, ids.clone()),
+                )?;
+            }
 
             old_sst_ids
         };

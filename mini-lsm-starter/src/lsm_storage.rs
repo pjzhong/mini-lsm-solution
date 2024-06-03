@@ -2,13 +2,13 @@
 #![allow(dead_code)] // TODO(you): remove this lint after implementing this mod
 
 use std::collections::HashMap;
-use std::fs;
+use std::fs::{self, File};
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use bytes::Bytes;
 use parking_lot::{Mutex, MutexGuard, RwLock};
 
@@ -23,7 +23,7 @@ use crate::iterators::two_merge_iterator::TwoMergeIterator;
 use crate::iterators::StorageIterator;
 use crate::key::KeySlice;
 use crate::lsm_iterator::{FusedIterator, LsmIterator};
-use crate::manifest::Manifest;
+use crate::manifest::{Manifest, ManifestRecord};
 use crate::mem_table::MemTable;
 use crate::mvcc::LsmMvccInner;
 use crate::table::{SsTable, SsTableBuilder, SsTableIterator};
@@ -260,10 +260,12 @@ impl LsmStorageInner {
     pub(crate) fn open(path: impl AsRef<Path>, options: LsmStorageOptions) -> Result<Self> {
         let path = path.as_ref();
         if path.is_file() {
-            return Err(anyhow!("{:?} is not a directory", path));
+            return Err(anyhow!("{:?} must be a directory ", path));
         }
 
         fs::create_dir_all(path)?;
+
+        let (manifest, records) = Manifest::recover(Self::path_of_manifest_static(path))?;
 
         let state = LsmStorageState::create(&options);
 
@@ -287,7 +289,7 @@ impl LsmStorageInner {
             block_cache: Arc::new(BlockCache::new(1024)),
             next_sst_id: AtomicUsize::new(1),
             compaction_controller,
-            manifest: None,
+            manifest: Some(manifest),
             options: options.into(),
             mvcc: None,
             compaction_filters: Arc::new(Mutex::new(Vec::new())),
@@ -432,8 +434,18 @@ impl LsmStorageInner {
         Self::path_of_wal_static(&self.path, id)
     }
 
+    pub(crate) fn path_of_manifest(&self) -> PathBuf {
+        self.path.join("MANIFEST")
+    }
+
+    pub(crate) fn path_of_manifest_static(path: impl AsRef<Path>) -> PathBuf {
+        path.as_ref().join("MANIFEST")
+    }
+
     pub(super) fn sync_dir(&self) -> Result<()> {
-        unimplemented!()
+        File::open(&self.path)?
+            .sync_all()
+            .with_context(|| format!("failed to sync on dir:{:?}", self.path))
     }
 
     /// Force freeze the current memtable to an immutable memtable
@@ -478,28 +490,33 @@ impl LsmStorageInner {
             Some(mem_table) => mem_table,
             None => return Ok(()),
         };
+        let sst_id = mem_table.id();
 
         let mut builder = SsTableBuilder::new(self.options.block_size);
         mem_table.flush(&mut builder)?;
         let sst_path = {
             let mut sst_path = self.path.clone();
-            sst_path.push(format!("{}.sst", mem_table.id()));
+            sst_path.push(format!("{}.sst", sst_id));
             sst_path
         };
 
-        let sst_table = builder.build(mem_table.id(), Some(self.block_cache.clone()), sst_path)?;
-        state.sstables.insert(mem_table.id(), Arc::new(sst_table));
+        let sst_table = builder.build(sst_id, Some(self.block_cache.clone()), sst_path)?;
+        state.sstables.insert(sst_id, Arc::new(sst_table));
         if self.compaction_controller.flush_to_l0() {
-            state.l0_sstables.insert(0, mem_table.id());
+            state.l0_sstables.insert(0, sst_id);
         } else {
-            state
-                .levels
-                .insert(0, (mem_table.id(), vec![mem_table.id()]))
+            state.levels.insert(0, (sst_id, vec![sst_id]))
         }
 
         //更新回去
-        let mut lock = self.state.write();
-        *lock = Arc::new(state);
+        {
+            let mut lock = self.state.write();
+            *lock = Arc::new(state);
+        }
+
+        if let Some(manifest) = self.manifest.as_ref() {
+            manifest.add_record(&_state_lock_observer, ManifestRecord::Flush(sst_id))?;
+        }
 
         Ok(())
     }
