@@ -112,7 +112,7 @@ impl LeveledCompactionController {
                     &snapshot.l0_sstables,
                     compact_level,
                 ),
-                is_lower_level_bottom_level: false,
+                is_lower_level_bottom_level: size.len() - 1 <= compact_level,
             }
             .into()
         } else {
@@ -148,7 +148,7 @@ impl LeveledCompactionController {
                     &[min],
                     compact_level + 1,
                 ),
-                is_lower_level_bottom_level: false,
+                is_lower_level_bottom_level: size.len() - 1 <= compact_level,
             }
             .into()
         }

@@ -64,7 +64,7 @@ impl TieredCompactionController {
                 if size_ration <= count as f32 / ids.len() as f32 {
                     return Some(TieredCompactionTask {
                         tiers: snapshot.levels[..idx + 1].to_vec(),
-                        bottom_tier_included: true,
+                        bottom_tier_included: false,
                     });
                 } else {
                     count += ids.len()
@@ -78,7 +78,7 @@ impl TieredCompactionController {
             tiers: snapshot.levels
                 [..snapshot.levels.len() - self.options.num_tiers + (self.options.num_tiers - 1)]
                 .to_vec(),
-            bottom_tier_included: true,
+            bottom_tier_included: false,
         })
     }
 

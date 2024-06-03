@@ -657,7 +657,7 @@ fn recover(storage: &mut LsmStorageInner) -> Result<(), anyhow::Error> {
         }
     }
 
-    let mut max_id = 0;
+    let mut max_id = 1;
     for id in snapshot
         .levels
         .iter()

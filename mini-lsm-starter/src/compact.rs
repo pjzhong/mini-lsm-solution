@@ -120,7 +120,7 @@ impl LsmStorageInner {
             CompactionTask::ForceFullCompaction {
                 l0_sstables,
                 l1_sstables,
-            } => self.full_compaction(l0_sstables, l1_sstables),
+            } => self.full_compaction(l0_sstables, l1_sstables, true),
             CompactionTask::Simple(task) => self.simple_leveled_compaction(task),
         }
     }
@@ -148,7 +148,7 @@ impl LsmStorageInner {
                 TwoMergeIterator::create(upper_sst_conact_iter, lower_sst_conact_iter)?
             };
 
-            self.iter_compaction(iter)
+            self.iter_compaction(iter, task.is_lower_level_bottom_level)
         } else {
             let iter = {
                 let read = self.state.read();
@@ -171,7 +171,7 @@ impl LsmStorageInner {
                 TwoMergeIterator::create(merge_iter, sst_conact_iter)?
             };
 
-            self.iter_compaction(iter)
+            self.iter_compaction(iter, task.is_lower_level_bottom_level)
         }
     }
 
@@ -179,6 +179,7 @@ impl LsmStorageInner {
         &self,
         l0_sstables: &[usize],
         l1_sstables: &[usize],
+        bottom_included: bool,
     ) -> Result<Vec<Arc<SsTable>>> {
         let iter = {
             let (l0, levels) = {
@@ -207,7 +208,7 @@ impl LsmStorageInner {
             )?
         };
 
-        self.iter_compaction(iter)
+        self.iter_compaction(iter, bottom_included)
     }
 
     fn simple_leveled_compaction(
@@ -237,9 +238,13 @@ impl LsmStorageInner {
                 )?
             };
 
-            self.iter_compaction(iter)
+            self.iter_compaction(iter, task.is_lower_level_bottom_level)
         } else {
-            self.full_compaction(&task.upper_level_sst_ids, &task.lower_level_sst_ids)
+            self.full_compaction(
+                &task.upper_level_sst_ids,
+                &task.lower_level_sst_ids,
+                task.is_lower_level_bottom_level,
+            )
         }
     }
 
@@ -264,19 +269,21 @@ impl LsmStorageInner {
         }
 
         let iter = MergeIterator::create(iter);
-        self.iter_compaction(iter)
+        self.iter_compaction(iter, task.bottom_tier_included)
     }
 
     pub fn iter_compaction(
         &self,
         mut iter: impl for<'a> StorageIterator<KeyType<'a> = KeySlice<'a>>,
+        bottom_included: bool,
     ) -> Result<Vec<Arc<SsTable>>> {
         let mut builder = SsTableBuilder::new(self.options.block_size);
         let mut sst_builders = vec![];
         while iter.is_valid() {
             let key = iter.key();
             let val = iter.value();
-            if val.is_empty() {
+            //只有最底层才能真的删除
+            if val.is_empty() && bottom_included {
                 iter.next()?;
             } else {
                 builder.add(key, val);
@@ -381,7 +388,7 @@ impl LsmStorageInner {
         };
 
         let sst_tables = self.compact(&task)?;
-        let ids = sst_tables
+        let ids: Vec<usize> = sst_tables
             .iter()
             .map(|sst| sst.sst_id())
             .collect::<Vec<_>>();

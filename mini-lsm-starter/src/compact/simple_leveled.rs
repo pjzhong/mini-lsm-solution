@@ -45,7 +45,7 @@ impl SimpleLeveledCompactionController {
                     .first()
                     .map(|(_, ids)| ids.clone())
                     .unwrap_or_default(),
-                is_lower_level_bottom_level: true,
+                is_lower_level_bottom_level: false,
             })
         } else {
             for level in 1..self.options.max_levels {
@@ -69,7 +69,7 @@ impl SimpleLeveledCompactionController {
                         upper_level_sst_ids: upper_level_sst_ids.clone(),
                         lower_level,
                         lower_level_sst_ids: lower_level_sst_ids.clone(),
-                        is_lower_level_bottom_level: true,
+                        is_lower_level_bottom_level: snapshot.levels.len() - 1 <= lower_level,
                     });
                 }
             }
@@ -92,7 +92,9 @@ impl SimpleLeveledCompactionController {
     ) -> (LsmStorageState, Vec<usize>) {
         let mut new_state = snapshot.clone();
         if let Some(upper) = &task.upper_level {
-            new_state.levels[*upper - 1].1.clear();
+            new_state.levels[*upper - 1]
+                .1
+                .retain(|id| !task.upper_level_sst_ids.contains(id))
         } else {
             new_state
                 .l0_sstables
