@@ -74,10 +74,11 @@ impl CompactionController {
         snapshot: &LsmStorageState,
         task: &CompactionTask,
         output: &[usize],
+        is_recovery: bool,
     ) -> (LsmStorageState, Vec<usize>) {
         match (self, task) {
             (CompactionController::Leveled(ctrl), CompactionTask::Leveled(task)) => {
-                ctrl.apply_compaction_result(snapshot, task, output)
+                ctrl.apply_compaction_result(snapshot, task, output, is_recovery)
             }
             (CompactionController::Simple(ctrl), CompactionTask::Simple(task)) => {
                 ctrl.apply_compaction_result(snapshot, task, output)
@@ -360,6 +361,7 @@ impl LsmStorageInner {
                     &state_lock,
                     manifest::ManifestRecord::Compaction(compaction_task, ids.clone()),
                 )?;
+                self.sync_dir()?;
             }
         }
 
@@ -405,7 +407,7 @@ impl LsmStorageInner {
 
             let (mut snapshost, old_sst_ids) = self
                 .compaction_controller
-                .apply_compaction_result(&snapshost, &task, &ids);
+                .apply_compaction_result(&snapshost, &task, &ids, false);
 
             for id in &old_sst_ids {
                 snapshost.sstables.remove(id);
@@ -419,6 +421,7 @@ impl LsmStorageInner {
                     &state_lock,
                     manifest::ManifestRecord::Compaction(task, ids.clone()),
                 )?;
+                self.sync_dir()?;
             }
 
             old_sst_ids

@@ -343,29 +343,11 @@ impl LsmStorageInner {
         }
 
         let key_slice = KeySlice::from_slice(key);
-        for idx in &storage.l0_sstables {
-            let sst_table = match storage.sstables.get(idx) {
-                Some(sst_table) if sst_table.key_may_contains(&key_slice) => sst_table.clone(),
-                _ => continue,
-            };
-
-            let iter = SsTableIterator::create_and_seek_to_key(sst_table, key_slice)?;
-            if !iter.is_valid() {
-                continue;
-            }
-
-            if iter.key() != key_slice {
-                continue;
-            }
-
-            return Ok(if iter.value().is_empty() {
-                None
-            } else {
-                Some(Bytes::copy_from_slice(iter.value()))
-            });
-        }
-
-        for idx in storage.levels.iter().flat_map(|(_, ids)| ids) {
+        for idx in storage
+            .l0_sstables
+            .iter()
+            .chain(storage.levels.iter().flat_map(|(_, ids)| ids))
+        {
             let sst_table = match storage.sstables.get(idx) {
                 Some(sst_table) if sst_table.key_may_contains(&key_slice) => sst_table.clone(),
                 _ => continue,
@@ -525,6 +507,7 @@ impl LsmStorageInner {
 
         if let Some(manifest) = self.manifest.as_ref() {
             manifest.add_record(&state_lock_observer, ManifestRecord::Flush(sst_id))?;
+            self.sync_dir()?;
         }
 
         Ok(())
@@ -639,18 +622,14 @@ fn recover(storage: &mut LsmStorageInner) -> Result<(), anyhow::Error> {
         match record {
             ManifestRecord::Flush(id) => {
                 let path = storage.path_of_sst(id);
-
                 if path.is_file() {
-                    let sst = FileObject::open(&path)?;
-                    let sst = SsTable::open(id, Some(storage.block_cache.clone()), sst)?;
                     snapshot.l0_sstables.insert(0, id);
-                    snapshot.sstables.insert(sst.sst_id(), sst.into());
                 }
             }
             ManifestRecord::Compaction(task, sst_ids) => {
                 let (snap_shot, _) = storage
                     .compaction_controller
-                    .apply_compaction_result(&snapshot, &task, &sst_ids);
+                    .apply_compaction_result(&snapshot, &task, &sst_ids, true);
                 snapshot = snap_shot;
             }
             ManifestRecord::NewMemtable(_) => todo!(),
@@ -659,10 +638,9 @@ fn recover(storage: &mut LsmStorageInner) -> Result<(), anyhow::Error> {
 
     let mut max_id = 1;
     for id in snapshot
-        .levels
+        .l0_sstables
         .iter()
-        .flat_map(|(_, ids)| ids.iter())
-        .chain(snapshot.l0_sstables.iter())
+        .chain(snapshot.levels.iter().flat_map(|(_, ids)| ids.iter()))
     {
         let id = *id;
         max_id = max_id.max(id);
@@ -671,6 +649,17 @@ fn recover(storage: &mut LsmStorageInner) -> Result<(), anyhow::Error> {
         let sst = FileObject::open(&path)?;
         let sst = SsTable::open(id, Some(storage.block_cache.clone()), sst)?;
         snapshot.sstables.insert(sst.sst_id(), sst.into());
+    }
+
+    for level in &mut snapshot.levels {
+        level.1.sort_by_key(|id| {
+            snapshot
+                .sstables
+                .get(id)
+                .map(|table| table.first_key())
+                .with_context(|| format!("recover levels failed, sst_table not found:{id:?}"))
+                .unwrap()
+        });
     }
 
     {

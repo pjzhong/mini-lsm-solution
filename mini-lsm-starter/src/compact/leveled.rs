@@ -159,6 +159,7 @@ impl LeveledCompactionController {
         snapshot: &LsmStorageState,
         task: &LeveledCompactionTask,
         output: &[usize],
+        is_recovery: bool,
     ) -> (LsmStorageState, Vec<usize>) {
         let mut new_snapshot = snapshot.clone();
         if let Some(upper_level) = task.upper_level {
@@ -174,13 +175,16 @@ impl LeveledCompactionController {
         let lower_level_sst_ids = &mut new_snapshot.levels[task.lower_level].1;
         lower_level_sst_ids.retain(|id| !task.lower_level_sst_ids.contains(id));
         lower_level_sst_ids.extend_from_slice(output);
-        lower_level_sst_ids.sort_by_key(|id| {
-            snapshot
-                .sstables
-                .get(id)
-                .map(|table| table.first_key())
-                .unwrap()
-        });
+        // It doesn't work on recvoery, because sst_table is not load at this monent
+        if !is_recovery {
+            lower_level_sst_ids.sort_by_key(|id| {
+                snapshot
+                    .sstables
+                    .get(id)
+                    .map(|table| table.first_key())
+                    .unwrap()
+            });
+        }
 
         let remove_sst_ids = task
             .upper_level_sst_ids
