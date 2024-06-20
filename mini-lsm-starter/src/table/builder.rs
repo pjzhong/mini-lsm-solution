@@ -134,7 +134,7 @@ impl SsTableBuilder {
             .map(|meta| meta.last_key.clone())
             .unwrap_or_default();
         BlockMeta::encode_block_meta(&sst_builder.meta, &mut bytes);
-
+        bytes.put_u32(crc32fast::hash(&bytes[block_meta_offset..]));
         bytes.put_u32(block_meta_offset as u32);
 
         let bloom_offset = bytes.len();
@@ -142,6 +142,7 @@ impl SsTableBuilder {
         let bloom = Bloom::build_from_key_hashes(&sst_builder.key_hashes, bits_per_key);
         bloom.encode(&mut bytes);
 
+        bytes.put_u32(crc32fast::hash(&bytes[bloom_offset..]));
         bytes.put_u32(bloom_offset as u32);
 
         let file = FileObject::create(path.as_ref(), bytes)?;

@@ -140,15 +140,27 @@ impl SsTable {
             bytes
         };
 
-        const U32_SIZE: usize = size_of::<u32>();
-        let bloom_offset = (&bytes[bytes.len() - U32_SIZE..]).get_u32() as usize;
-        let bloom = &bytes[bloom_offset..bytes.len() - U32_SIZE];
+        const CHECK_SUM_AND_OFFSET_LENGTH: usize = size_of::<u32>() * 2;
+
+        let (bloom_check_sum, bloom_offset) = {
+            let mut bytes = &bytes[bytes.len() - CHECK_SUM_AND_OFFSET_LENGTH..];
+            (bytes.get_u32(), bytes.get_u32() as usize)
+        };
+        let bloom = &bytes[bloom_offset..bytes.len() - CHECK_SUM_AND_OFFSET_LENGTH];
+        if crc32fast::hash(bloom) != bloom_check_sum {
+            return Err(anyhow!("sst_open, bloom check error"));
+        }
         let bloom = Bloom::decode(bloom)?;
 
         let bytes = &bytes[..bloom_offset];
-        let block_meta_offset = (&bytes[bytes.len() - U32_SIZE..]).get_u32() as usize;
-
-        let block_meta = &bytes[block_meta_offset..bytes.len() - U32_SIZE];
+        let (block_check_sum, block_meta_offset) = {
+            let mut bytes = &bytes[bytes.len() - CHECK_SUM_AND_OFFSET_LENGTH..];
+            (bytes.get_u32(), bytes.get_u32() as usize)
+        };
+        let block_meta = &bytes[block_meta_offset..bytes.len() - CHECK_SUM_AND_OFFSET_LENGTH];
+        if crc32fast::hash(block_meta) != block_check_sum {
+            return Err(anyhow!("sst_open, block check error"));
+        }
         let block_meta = BlockMeta::decode_block_meta(block_meta);
         let first_key = block_meta
             .first()
