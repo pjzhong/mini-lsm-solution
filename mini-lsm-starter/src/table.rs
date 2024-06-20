@@ -206,13 +206,24 @@ impl SsTable {
         ) {
             (Some(fir), Some(sec)) => (fir.offset, sec.offset - fir.offset),
             (Some(fir), None) => (fir.offset, self.block_meta_offset - fir.offset),
+            // Should return error or ok?
             _ => return Ok(Arc::default()),
         };
 
         let mut buffer = vec![0; length];
         file.read_exact_at(&mut buffer, start as u64)?;
 
-        Ok(Arc::new(Block::decode(&buffer)))
+        let check_sum_start = length - size_of::<u32>();
+        let check_sum = (&buffer[check_sum_start..]).get_u32();
+
+        let block_buffer = &buffer[0..check_sum_start];
+        let blok_check_sum = crc32fast::hash(block_buffer);
+
+        if blok_check_sum != check_sum {
+            return Err(anyhow!("block on idx:{block_idx}, check_sum error"));
+        }
+
+        Ok(Arc::new(Block::decode(block_buffer)))
     }
 
     /// Read a block from disk, with block cache. (Day 4)

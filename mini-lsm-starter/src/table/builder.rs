@@ -77,7 +77,7 @@ impl SsTableBuilder {
         let block = Arc::new(block.build());
         let offset = self.data.len();
 
-        let iter = BlockIterator::new_with_prefix(
+        let iter: BlockIterator = BlockIterator::new_with_prefix(
             block.clone(),
             Some(KeyBytes::from_bytes(Bytes::copy_from_slice(
                 &self.first_key,
@@ -90,7 +90,11 @@ impl SsTableBuilder {
             last_key: iter.last_key().unwrap_or_default().into_key_bytes(),
         };
         self.meta.push(block_meta);
-        self.data.extend_from_slice(&block.encode());
+        let data = &block.encode();
+        self.data.extend_from_slice(data);
+
+        let check_sum = crc32fast::hash(data);
+        self.data.put_u32(check_sum)
     }
 
     /// Get the estimated size of the SSTable.
