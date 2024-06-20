@@ -45,13 +45,25 @@ impl MemTable {
     }
 
     /// Create a new mem-table with WAL
-    pub fn create_with_wal(_id: usize, _path: impl AsRef<Path>) -> Result<Self> {
-        unimplemented!()
+    pub fn create_with_wal(id: usize, path: impl AsRef<Path>) -> Result<Self> {
+        Ok(Self {
+            map: Arc::default(),
+            wal: Some(Wal::create(path)?),
+            id,
+            approximate_size: Arc::default(),
+        })
     }
 
     /// Create a memtable from WAL
-    pub fn recover_from_wal(_id: usize, _path: impl AsRef<Path>) -> Result<Self> {
-        unimplemented!()
+    pub fn recover_from_wal(id: usize, path: impl AsRef<Path>) -> Result<Self> {
+        let map = Arc::default();
+        let wal = Wal::recover(path, &map)?;
+        Ok(Self {
+            map,
+            wal: Some(wal),
+            id,
+            approximate_size: Arc::default(),
+        })
     }
 
     pub fn for_testing_put_slice(&self, key: &[u8], value: &[u8]) -> Result<()> {
@@ -80,6 +92,9 @@ impl MemTable {
     /// In week 1, day 1, simply put the key-value pair into the skipmap.
     /// In week 2, day 6, also flush the data to WAL.
     pub fn put(&self, key: &[u8], value: &[u8]) -> Result<()> {
+        if let Some(wal) = &self.wal {
+            wal.put(key, value)?;
+        }
         self.approximate_size
             .fetch_add(key.len() + value.len(), std::sync::atomic::Ordering::SeqCst);
         self.map
@@ -88,7 +103,7 @@ impl MemTable {
     }
 
     pub fn sync_wal(&self) -> Result<()> {
-        if let Some(ref wal) = self.wal {
+        if let Some(wal) = &self.wal {
             wal.sync()?;
         }
         Ok(())

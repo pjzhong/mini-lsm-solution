@@ -1,7 +1,7 @@
 #![allow(unused_variables)] // TODO(you): remove this lint after implementing this mod
 #![allow(dead_code)] // TODO(you): remove this lint after implementing this mod
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
@@ -176,9 +176,7 @@ impl MiniLsm {
             }
         }
 
-        if self.inner.options.enable_wal {
-            unimplemented!()
-        } else {
+        if !self.inner.options.enable_wal {
             if !self.inner.state.read().memtable.is_empty() {
                 self.inner
                     .force_freeze_memtable(&self.inner.state_lock.lock())?;
@@ -312,7 +310,8 @@ impl LsmStorageInner {
     }
 
     pub fn sync(&self) -> Result<()> {
-        unimplemented!()
+        self.state.read().memtable.sync_wal()?;
+        Ok(())
     }
 
     pub fn add_compaction_filter(&self, compaction_filter: CompactionFilter) {
@@ -373,35 +372,44 @@ impl LsmStorageInner {
     }
 
     /// Write a batch of data into the storage. Implement in week 2 day 7.
-    pub fn write_batch<T: AsRef<[u8]>>(&self, _batch: &[WriteBatchRecord<T>]) -> Result<()> {
-        unimplemented!()
+    pub fn write_batch<T: AsRef<[u8]>>(&self, batch: &[WriteBatchRecord<T>]) -> Result<()> {
+        for batch in batch {
+            let (key, value) = match batch {
+                WriteBatchRecord::Put(key, value) => (key.as_ref(), value.as_ref()),
+                //Why Default::default work, but &[] doesn't????
+                WriteBatchRecord::Del(key) => (key.as_ref(), Default::default()),
+            };
+
+            if key.is_empty() {
+                return Err(anyhow!("Key is empty"));
+            }
+
+            let (res, approximate_size) = {
+                let state = self.state.read();
+                let res = state.memtable.put(key, value);
+                (res, state.memtable.approximate_size())
+            };
+            match res {
+                Ok(_) => {
+                    if self.memtable_reaches_capacity_on_put(approximate_size) {
+                        let lock = self.state_lock.lock();
+                        if self.memtable_reaches_capacity_on_put(
+                            self.state.read().memtable.approximate_size(),
+                        ) {
+                            return self.force_freeze_memtable(&lock);
+                        }
+                    }
+                }
+                e @ Err(_) => return e,
+            }
+        }
+
+        Ok(())
     }
 
     /// Put a key-value pair into the storage by writing into the current memtable.
     pub fn put(&self, key: &[u8], value: &[u8]) -> Result<()> {
-        if key.is_empty() {
-            return Err(anyhow!("Key is empty"));
-        }
-
-        let (res, approximate_size) = {
-            let state = self.state.read();
-            let res = state.memtable.put(key, value);
-            (res, state.memtable.approximate_size())
-        };
-        match res {
-            Ok(_) => {
-                if self.memtable_reaches_capacity_on_put(approximate_size) {
-                    let lock = self.state_lock.lock();
-                    if self.memtable_reaches_capacity_on_put(
-                        self.state.read().memtable.approximate_size(),
-                    ) {
-                        return self.force_freeze_memtable(&lock);
-                    }
-                }
-                Ok(())
-            }
-            e @ Err(_) => e,
-        }
+        self.write_batch(&[WriteBatchRecord::Put(key, value)])
     }
 
     fn memtable_reaches_capacity_on_put(&self, size: usize) -> bool {
@@ -410,7 +418,7 @@ impl LsmStorageInner {
 
     /// Remove a key from the storage by writing an empty value.
     pub fn delete(&self, key: &[u8]) -> Result<()> {
-        self.put(key, &[])
+        self.write_batch(&[WriteBatchRecord::Del(key)])
     }
 
     pub(crate) fn path_of_sst_static(path: impl AsRef<Path>, id: usize) -> PathBuf {
@@ -444,16 +452,19 @@ impl LsmStorageInner {
     }
 
     /// Force freeze the current memtable to an immutable memtable
-    pub fn force_freeze_memtable(&self, _state_lock_observer: &MutexGuard<'_, ()>) -> Result<()> {
+    pub fn force_freeze_memtable(&self, state_lock_observer: &MutexGuard<'_, ()>) -> Result<()> {
         let mut lock = self.state.write();
         //为什么要克隆，保持state的整体引用不会突然发生变化？
         //我在更新state.memtable时候会其改变指向。如果不克隆，其它线程就会发现state.memtable在使用中突然改变了。
         let mut state = lock.as_ref().clone();
-
-        let mem_table = Arc::new(MemTable::create(self.next_sst_id()));
+        let id = self.next_sst_id();
+        let mem_table = Arc::new(MemTable::create_with_wal(id, self.path_of_wal(id))?);
         let old_mem_table = std::mem::replace(&mut state.memtable, mem_table);
 
         state.imm_memtables.insert(0, old_mem_table);
+        if let Some(manifest) = &self.manifest {
+            manifest.add_record(state_lock_observer, ManifestRecord::NewMemtable(id))?;
+        }
 
         // dereferencing RwLockWriteGuard
         // 改完之后，更新回去
@@ -618,6 +629,7 @@ fn recover(storage: &mut LsmStorageInner) -> Result<(), anyhow::Error> {
     let (manifest, records) = Manifest::recover(storage.path_of_manifest())?;
 
     let mut snapshot: LsmStorageState = storage.state.read().as_ref().clone();
+    let mut mem_ids = HashSet::new();
     for record in records {
         match record {
             ManifestRecord::Flush(id) => {
@@ -632,23 +644,27 @@ fn recover(storage: &mut LsmStorageInner) -> Result<(), anyhow::Error> {
                     .apply_compaction_result(&snapshot, &task, &sst_ids, true);
                 snapshot = snap_shot;
             }
-            ManifestRecord::NewMemtable(_) => todo!(),
+            ManifestRecord::NewMemtable(id) => {
+                mem_ids.insert(id);
+            }
         }
     }
 
-    let mut max_id = 1;
+    let mut max_sst_id = 0;
     for id in snapshot
         .l0_sstables
         .iter()
         .chain(snapshot.levels.iter().flat_map(|(_, ids)| ids.iter()))
     {
         let id = *id;
-        max_id = max_id.max(id);
+        max_sst_id = max_sst_id.max(id);
         let path = storage.path_of_sst(id);
 
         let sst = FileObject::open(&path)?;
         let sst = SsTable::open(id, Some(storage.block_cache.clone()), sst)?;
         snapshot.sstables.insert(sst.sst_id(), sst.into());
+
+        mem_ids.remove(&id);
     }
 
     for level in &mut snapshot.levels {
@@ -662,10 +678,34 @@ fn recover(storage: &mut LsmStorageInner) -> Result<(), anyhow::Error> {
         });
     }
 
+    let mem_ids = {
+        let mut mem_ids = Vec::from_iter(mem_ids);
+        mem_ids.sort();
+        mem_ids.reverse();
+        mem_ids
+    };
+    let next_sst_id = mem_ids.iter().max().unwrap_or(&1).max(&max_sst_id) + 1;
+
     {
+        //根据所有 mem_id来进行恢复，然后一个新的mem_table
         let mut write_lock = storage.state.write();
-        snapshot.memtable = MemTable::create(max_id + 1).into();
-        storage.next_sst_id = (snapshot.memtable.id() + 1).into();
+        storage.next_sst_id = next_sst_id.into();
+        snapshot.memtable = {
+            let sst_id = storage.next_sst_id();
+            if storage.options.enable_wal {
+                MemTable::create_with_wal(sst_id, storage.path_of_wal(sst_id))?.into()
+            } else {
+                MemTable::create(sst_id).into()
+            }
+        };
+
+        for mem_id in mem_ids {
+            let mem_table = Arc::new(MemTable::recover_from_wal(
+                mem_id,
+                storage.path_of_wal(mem_id),
+            )?);
+            snapshot.imm_memtables.push(mem_table);
+        }
         *write_lock = snapshot.into();
     }
 
